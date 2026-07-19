@@ -91,32 +91,42 @@ class DataIO:
             f"beta=1/(10% max displacement)={beta:.6g}"
         )
 
-    def _parse_columns(self, data, ncols, base, t_unload, L_data):
-        """Extract the observed displacement for the active model.
+    def _parse_columns(self, data, ncols, base, t_unload, L_data, use_y):
+        """Extract observed displacement columns for the active model.
 
-        Perpendicular models observe the y-displacement; all others observe x.
-        Only the observed series is kept (the other is ``None``). Returns
-        ``t, x, y`` plus a dict of model-specific dataset fields and a flag for
-        whether perpendicular data must supply a y column.
+        Perpendicular models fit only the y-displacement. All other models fit
+        x by default, and ``use_y=True`` adds y as a second fitted component.
         """
         t = data[:, 0]
         x = None
         y = None
         extra: dict = {}
         require_perp_y = self._is_perpendicular()
+        fit_components = ["y"] if require_perp_y else ["x"]
 
         if require_perp_y:
+            if ncols < 3:
+                raise ValueError(
+                    f"Perpendicular data requires a y-displacement column in '{base}'."
+                )
             # Perpendicular (90°): observed y-displacement is column 2, recentered.
             y = _recenter_displacement(data[:, 2])
         else:
             x = data[:, 1]
+            if use_y:
+                if ncols < 3:
+                    raise ValueError(
+                        f"use_y=True requires a y-displacement column in '{base}'."
+                    )
+                y = _recenter_displacement(data[:, 2])
+                fit_components.append("y")
 
         if self.material_model == "viscoelastic":
             extra["t_unload"] = t_unload
         elif self.model == "newtonian_particle_particle":
             extra["L"] = L_data
 
-        return t, x, y, extra, require_perp_y
+        return t, x, y, extra, tuple(fit_components), require_perp_y
 
     def load_data(
         self,
@@ -126,6 +136,7 @@ class DataIO:
         append: bool = False,
         seed: Optional[int] = 42,
         thin_factor: Optional[int] = None,
+        use_y: bool = False,
     ) -> None:
 
         info = print
@@ -184,8 +195,8 @@ class DataIO:
                     )
                 info(f"  Hasimoto domain length: L/a = {L_data:g}")
 
-            t, x, y, extra, require_perp_y = self._parse_columns(
-                data, ncols, base, t_unload, L_data
+            t, x, y, extra, fit_components, require_perp_y = self._parse_columns(
+                data, ncols, base, t_unload, L_data, bool(use_y)
             )
 
             t, x, y, _ = _thin_data(t, x, y, thin, [], info)
@@ -200,12 +211,14 @@ class DataIO:
                     t=t, x=x, y=y,
                     F=force, Fx=Fx, Fy=Fy, angle=angle,
                     filename=fname, thin_factor=thin,
+                    use_y=bool(use_y),
+                    fit_components=fit_components,
                     **extra,
                 )
             )
             info(
                 f"Loaded {base}: angle={angle:.1f}°, Fx={Fx:.3e}, Fy={Fy:.3e}, "
-                f"n_points={len(t)}"
+                f"components={','.join(fit_components)}, n_points={len(t)}"
             )
 
         # Keep a pristine copy of each new series before any noise is added.
@@ -220,26 +233,31 @@ class DataIO:
         if use_percent and new_datasets:
             peak = 0.0
             for d in new_datasets:
-                obs = d.get("y") if self._is_perpendicular() else d.get("x")
-                if obs is not None and len(obs) > 0:
-                    peak = max(peak, float(np.max(np.abs(obs))))
+                for component in d.get("fit_components", ("y",) if self._is_perpendicular() else ("x",)):
+                    obs = d.get(component)
+                    if obs is not None and len(obs) > 0:
+                        peak = max(peak, float(np.max(np.abs(obs))))
 
             noise_level = (self.sigma_noise_percent / 100.0) * peak
             self.sigma_noise_added = noise_level
             if noise_level > 0:
                 rng = np.random.default_rng(seed)
+                all_noise = []
                 for d in new_datasets:
                     n = len(d["t"])
-                    tmp = rng.normal(0, noise_level, n)
-                    d["noise_added"] = tmp.copy()
-                    if d.get("x") is not None:
-                        d["x"] = d["x"] + tmp
-                    if d.get("y") is not None:
-                        d["y"] = d["y"] + tmp
+                    component_noises = []
+                    for component in d.get("fit_components", ("y",) if self._is_perpendicular() else ("x",)):
+                        if d.get(component) is None:
+                            continue
+                        tmp = rng.normal(0, noise_level, n)
+                        d[f"{component}_noise_added"] = tmp.copy()
+                        d[component] = d[component] + tmp
+                        component_noises.append(tmp)
+                        all_noise.append(tmp)
+                    if len(component_noises) == 1:
+                        d["noise_added"] = component_noises[0].copy()
 
-                all_noise = np.concatenate(
-                    [d["noise_added"] for d in self.datasets if "noise_added" in d]
-                )
+                all_noise = np.concatenate(all_noise)
                 self.sigma_noise_true = float(
                     np.std(all_noise, ddof=1 if all_noise.size > 1 else 0)
                 )

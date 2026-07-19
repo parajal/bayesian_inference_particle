@@ -3,6 +3,42 @@
 import numpy as np
 
 
+class BoundedTransform:
+    """Logit transform from a finite interval to the real line."""
+
+    def __init__(self, lower: float, upper: float):
+        if not lower < upper:
+            raise ValueError("lower must be less than upper.")
+        self.lower = float(lower)
+        self.upper = float(upper)
+
+    def __call__(self, x):
+        x = np.asarray(x, dtype=float)
+        return np.log((x - self.lower) / (self.upper - x))
+
+    def inverse(self, y):
+        y = np.asarray(y, dtype=float)
+        sigmoid = 1.0 / (1.0 + np.exp(-y))
+        return self.lower + (self.upper - self.lower) * sigmoid
+
+    def jacobian(self, x):
+        x = np.asarray(x, dtype=float)
+        return (self.upper - self.lower) / ((x - self.lower) * (self.upper - x))
+
+
+class LogTransform:
+    """Log transform from positive values to the real line."""
+
+    def __call__(self, x):
+        return np.log(x)
+
+    def inverse(self, y):
+        return np.exp(y)
+
+    def jacobian(self, x):
+        return 1.0 / np.asarray(x, dtype=float)
+
+
 class Transforms:
     """Material parameters use log10; noise/bias use physical units."""
 
@@ -23,5 +59,5 @@ class Transforms:
         """Physical -> sampler: phi = log10(theta) for log10 coordinates."""
         phi = np.array(theta, dtype=float, copy=True)
         mask = self._get_log10_mask()
-        phi[..., mask] = np.log10(np.maximum(phi[..., mask]))
+        phi[..., mask] = np.log10(np.maximum(phi[..., mask], np.finfo(float).tiny))
         return phi

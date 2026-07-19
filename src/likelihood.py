@@ -22,8 +22,8 @@ class Likelihood:
         return sigma_noise**2 * np.eye(len(t)) + sigma_bias**2 * K
 
     def _use_y_displacement(self, d):
-        """Use y for wall-normal/perpendicular trajectories (theta ~ 90)."""
-        return self._is_perpendicular()
+        """Return True when a dataset is fitted only through y."""
+        return self._fit_components(d) == ("y",)
 
     @staticmethod
     def _gaussian_log_likelihood(residual, covariance):
@@ -43,38 +43,30 @@ class Likelihood:
 
         return -0.5 * quad - 0.5 * logdet - 0.5 * len(residual) * np.log(2.0 * np.pi)
 
-    def _dataset_residual(self, d, theta):
-        """r = x_obs - d(10^mu_hat), using x except for perpendicular cases."""
+    def _dataset_residuals(self, d, theta):
+        """Return fitted residuals rx and, when requested, ry for one dataset."""
         t = d["t"]
-        use_y = self._use_y_displacement(d)
+        residuals = []
 
-        if self.material_model == "newtonian":
-            model = self.model_newtonian(
-                theta[0],
-                t,
-                d["F"],
-                self._get_delta0(theta),
-                L=d.get("L"),
-            )
-        elif self.material_model == "viscoelastic":
-            model = self.model_viscoelastic(
-                theta[0],
-                theta[1],
-                theta[2],
-                t,
-                d["F"],
-                self._get_delta0(theta),
-                t_unload=d.get("t_unload"),
-            )
-        else:
-            raise ValueError(f"Invalid model in log_likelihood: {self.model!r}")
+        for component in self._fit_components(d):
+            observed = d.get(component)
+            model = self._model_component_at(theta, t, d, component=component)
+            if observed is None or model is None or not np.all(np.isfinite(model)):
+                return None
 
-        observed = d["y"] if use_y else d["x"]
-        if observed is None or not np.all(np.isfinite(model)):
+            residual = np.asarray(observed, dtype=float) - np.asarray(model, dtype=float)
+            if not np.all(np.isfinite(residual)):
+                return None
+            residuals.append((component, residual))
+
+        return residuals
+
+    def _dataset_residual(self, d, theta):
+        """Return all fitted residual components concatenated for diagnostics."""
+        residuals = self._dataset_residuals(d, theta)
+        if residuals is None:
             return None
-
-        residual = np.asarray(observed, dtype=float) - np.asarray(model, dtype=float)
-        return residual if np.all(np.isfinite(residual)) else None
+        return np.concatenate([residual for _, residual in residuals])
 
     @staticmethod
     def _valid_sigma(value):
@@ -92,15 +84,16 @@ class Likelihood:
 
         total = 0.0
         for d in self.datasets:
-            residual = self._dataset_residual(d, theta)
-            if residual is None:
+            residuals = self._dataset_residuals(d, theta)
+            if residuals is None:
                 return -np.inf
 
             covariance = self._covariance_matrix(d["t"], sigma_noise, sigma_bias)
-            value = self._gaussian_log_likelihood(residual, covariance)
-            if not np.isfinite(value):
-                return -np.inf
-            total += value
+            for _, residual in residuals:
+                value = self._gaussian_log_likelihood(residual, covariance)
+                if not np.isfinite(value):
+                    return -np.inf
+                total += value
 
         return float(total)
 

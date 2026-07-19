@@ -15,6 +15,43 @@ class ForwardModels:
     def _is_perpendicular(self):
         return abs(float(self.theta) % 180.0 - 90.0) < 1e-6
 
+    def _default_component(self):
+        return "y" if self._is_perpendicular() else "x"
+
+    def _normalize_component(self, component):
+        component = self._default_component() if component is None else str(component).lower()
+        if component not in ("x", "y"):
+            raise ValueError("component must be 'x' or 'y'.")
+        return component
+
+    def _fit_components(self, d):
+        components = tuple(d.get("fit_components") or (self._default_component(),))
+        if not components:
+            return (self._default_component(),)
+        return components
+
+    def _model_component_at(self, theta, t, d, component=None):
+        """Forward model at physical parameters theta for one displacement component."""
+        if self.material_model == "newtonian":
+            return self.model_newtonian(
+                theta[0],
+                t,
+                d["F"],
+                self._get_delta0(theta),
+                L=d.get("L"),
+                component=component,
+            )
+        return self.model_viscoelastic(
+            theta[0],
+            theta[1],
+            theta[2],
+            t,
+            d["F"],
+            self._get_delta0(theta),
+            t_unload=d.get("t_unload"),
+            component=component,
+        )
+
     @staticmethod
     def _force(time, force, t_unload):
         return float(force) if time <= t_unload else 0.0
@@ -44,9 +81,10 @@ class ForwardModels:
     def _time_key(self, t):
         return np.asarray(t, dtype=float).tobytes()
 
-    def model_newtonian(self, eta, t, F, delta0=None, L=None):
+    def model_newtonian(self, eta, t, F, delta0=None, L=None, component=None):
         """Newtonian displacement using boundary_model and theta."""
         t = np.asarray(t, dtype=float)
+        component = self._normalize_component(component)
         x = np.zeros_like(t)
         y = np.zeros_like(t)
         drag = 6.0 * np.pi * self.a * eta
@@ -55,9 +93,8 @@ class ForwardModels:
         Fy = F * np.sin(theta)
 
         if self.boundary_model == "unbounded":
-            # Isotropic Stokes drag; use the force component along the observed
-            # direction (Fy for perpendicular / theta=90, Fx otherwise).
-            F_dir = Fy if self._is_perpendicular() else Fx
+            # Isotropic Stokes drag; use the force component along the requested direction.
+            F_dir = Fy if component == "y" else Fx
             return F_dir * (t - t[0]) / drag
 
         if self.boundary_model == "particle_particle":
@@ -65,7 +102,8 @@ class ForwardModels:
             if L is None or not np.isfinite(L) or L <= 0.0:
                 raise ValueError("particle_particle requires a positive L.")
             hasimoto = self._hasimoto_Q(L)
-            return Fx * ((t - t[0]) / drag) * hasimoto
+            F_dir = Fy if component == "y" else Fx
+            return F_dir * ((t - t[0]) / drag) * hasimoto
 
         delta0 = self.delta0 if delta0 is None else delta0
         if delta0 is None or not np.isfinite(delta0) or delta0 <= 0.0:
@@ -79,11 +117,12 @@ class ForwardModels:
             x[i + 1] = x[i] + (t[i + 1] - t[i]) * dxdt
             y[i + 1] = y[i] + (t[i + 1] - t[i]) * dydt
 
-        return y if self._is_perpendicular() else x
+        return y if component == "y" else x
 
-    def model_viscoelastic(self, eta_s, eta_p, lambda_, t, F, delta0=None, t_unload=None):
+    def model_viscoelastic(self, eta_s, eta_p, lambda_, t, F, delta0=None, t_unload=None, component=None):
         """Viscoelastic displacement selected by boundary_model and theta."""
         t = np.asarray(t, dtype=float)
+        component = self._normalize_component(component)
 
         t_unload = self._t_unload_eff if t_unload is None else t_unload
         solvent_drag = 6.0 * np.pi * self.a * eta_s
@@ -104,8 +143,9 @@ class ForwardModels:
         if self.boundary_model == "unbounded":
             eta_0 = eta_s + eta_p
             eff_tau = lambda_ * eta_s / eta_0
-            v_steady = Fx / (6.0 * np.pi * self.a * eta_0)
-            prefactor = Fx * lambda_ * eta_p / (6.0 * np.pi * self.a * eta_0**2)
+            F_dir = Fy if component == "y" else Fx
+            v_steady = F_dir / (6.0 * np.pi * self.a * eta_0)
+            prefactor = F_dir * lambda_ * eta_p / (6.0 * np.pi * self.a * eta_0**2)
 
             load_time = t - t[0]                    
             end_load = max(0.0, t_unload - t[0])     
@@ -123,6 +163,8 @@ class ForwardModels:
             raise ValueError("bounded viscoelastic model requires a positive delta0.")
 
         if self._is_perpendicular():
+            if component == "x":
+                return np.zeros_like(t)
             key = ("viscoelastic_bounded_perp", self.a, eta_s, eta_p, lambda_, delta0, Fy, t_unload, self._time_key(t))
 
             def ode_eqn(time, state):
@@ -132,7 +174,8 @@ class ForwardModels:
                 dFpydt = -Fpy / lambda_ + polymer_drag * dydt / lambda_
                 return [dydt, dFpydt]
 
-            return solve(key, [0.0, 0.0], ode_eqn)[0]
+            sol = solve(key, [0.0, 0.0], ode_eqn)
+            return None if sol is None else sol[0]
 
         key = ("viscoelastic_bounded", self.a, eta_s, eta_p, lambda_, delta0, Fx, Fy, t_unload, self._time_key(t))
 
@@ -145,4 +188,7 @@ class ForwardModels:
             dFpydt = -Fpy / lambda_ + polymer_drag * dydt / lambda_
             return [dxdt, dydt, dFpxdt, dFpydt]
 
-        return solve(key, [0.0, 0.0, 0.0, 0.0], ode_eqn)[0]
+        sol = solve(key, [0.0, 0.0, 0.0, 0.0], ode_eqn)
+        if sol is None:
+            return None
+        return sol[1] if component == "y" else sol[0]
