@@ -1,31 +1,17 @@
 """MCMC sampling and Gelman-Rubin diagnostics."""
 
-from __future__ import annotations
-
 import warnings
 from typing import Optional
-
 import emcee
 import numpy as np
-
-try:
-    from sklearn.cluster import KMeans
-except ImportError:
-    KMeans = None
+from sklearn.cluster import KMeans
 
 
 class Sampler:
     """MCMC sampling, diagnostics, and walker initialisation."""
 
-    _EPS = 1e-15
-    _KM_NINIT = 10
-    _KM_MAXITER = 200
-
-    # Derived quantities reported alongside the sampled parameters.
-    # Each entry: (name, numerator_label, denominator_label, human formula).
-    # Labels refer to the non-latex parameter names from _get_parameter_labels.
     _DERIVED_RATIOS = (
-        ("G", "eta_p_eff", "lambda", "G = eta_p_eff / lambda"),
+        ("G", "eta_p", "lambda", "G = eta_p / lambda"),
     )
 
     @staticmethod
@@ -38,9 +24,9 @@ class Sampler:
         W = np.mean(np.var(chain, axis=2, ddof=1), axis=1)
         B = N * np.var(np.mean(chain, axis=2), axis=1, ddof=1)
         var_plus = ((N - 1) / N) * W + B / N
-        return np.sqrt((var_plus + Sampler._EPS) / (W + Sampler._EPS))
+        return np.sqrt((var_plus) / (W))
 
-    def compute_derived_quantities(self) -> dict:
+    def posterior_summaries(self) -> dict:
         """Return posterior summaries for simple derived quantities such as G."""
         if getattr(self, "samples", None) is None or len(self.samples) == 0:
             return {}
@@ -81,10 +67,8 @@ class Sampler:
 
         return out
 
-    def print_diagnostics(self) -> dict:
+    def print_results(self) -> dict:
         """Compute and print mean, std, and Gelman-Rubin R-hat for every parameter."""
-        if self.sampler is None:
-            raise RuntimeError("Run MCMC before computing diagnostics.")
 
         raw = self.sampler.get_chain()
         burn = min(int(self.burn_fraction * raw.shape[0]), raw.shape[0] - 2)
@@ -129,7 +113,7 @@ class Sampler:
             print(f"{'Mean Rhat':<14s} {'':>14s} {'':>14s} {mean_rhat:10.4f}")
             print(f"{'Std Rhat':<14s} {'':>14s} {'':>14s} {std_rhat:10.4f}")
 
-        derived = self.compute_derived_quantities()
+        derived = self.posterior_summaries()
         if derived:
             print("-" * 64)
             print("Derived quantities")
@@ -138,44 +122,13 @@ class Sampler:
             for name, s in derived.items():
                 print(f"  {s['formula']}")
 
-        print("=" * 64)
-
-        bad = [name for name in names if d[name]["Rhat"] > 1.1]
-        if bad:
-            print("\nConvergence warnings (Rhat > 1.1):")
-            for name in bad:
-                print(f"  - {name}: Rhat = {d[name]['Rhat']:.4f}")
-        else:
-            print("\nAll parameters show good convergence (Rhat <= 1.1)")
-
-        print()
-        return d
-
-    @staticmethod
-    def _run_sampler(sampler, p0, nsteps: int, label: str, progress: bool = True):
-        """Run emcee with a visible tqdm progress bar."""
-        if not progress:
-            return sampler.run_mcmc(p0, nsteps, progress=False)
-
-        try:
-            from tqdm.auto import tqdm
-            import sys
-        except ImportError:
-            return sampler.run_mcmc(p0, nsteps, progress=True)
-
-        state = None
-        with tqdm(total=nsteps, desc=label, dynamic_ncols=True, file=sys.stdout) as bar:
-            for state in sampler.sample(p0, iterations=nsteps, progress=False):
-                bar.update(1)
-        return state
-
     def _warmup_starting_points(self, p0, moves, random_state, progress):
         """Run a short chain and restart near the best warm-up samples."""
         n_warmup = int(0.1 * self.nsteps)
 
         print(f"\nWarm-up: {n_warmup} steps x {self.nwalkers} walkers")
         sampler = emcee.EnsembleSampler(self.nwalkers, self.ndim, self.log_posterior, moves=moves)
-        self._run_sampler(sampler, p0, n_warmup, "Warm-up", progress)
+        sampler.run_mcmc(p0, self.nsteps, progress=True)
 
         chain = sampler.get_chain(flat=True)
         log_prob = sampler.get_log_prob(flat=True)
@@ -246,20 +199,15 @@ class Sampler:
                 print(f"  {i:02d}: {self._to_physical(p0[i])}")
 
         self.sampler = emcee.EnsembleSampler(self.nwalkers, self.ndim, self.log_posterior, moves=moves)
-        self._run_sampler(self.sampler, p0, self.nsteps, "MCMC", progress)
-
+        self.sampler.run_mcmc(p0, self.nsteps, progress=True)
         burn = min(int(self.burn_fraction * self.nsteps), self.nsteps - 2)
         self.samples = self._to_physical(self.sampler.get_chain(discard=burn, flat=True))
-        self.print_diagnostics()
+        self.print_results()
 
         return self.samples
 
     def sample_starting_points(
-        self,
-        n_candidates: Optional[int] = None,
-        method: str = "kmeans",
-        random_state: Optional[int] = 42,
-    ) -> np.ndarray:
+        self, method: str = "kmeans", random_state: Optional[int] = 42) -> np.ndarray:
         """
         Generate starting points for MCMC walkers.
 
@@ -273,62 +221,31 @@ class Sampler:
             Walker positions in sampler space, with all sampled positive
             parameters log10-transformed.
         """
-        method = str(method).lower()
-        if method not in ("random", "kmeans"):
-            raise ValueError("method must be 'random' or 'kmeans'")
-        if method == "kmeans" and KMeans is None:
-            warnings.warn(
-                "scikit-learn is not installed; falling back to random initialization.",
-                RuntimeWarning, stacklevel=2)
-            method = "random"
 
-        ndim = self._get_ndim()
         phys_bounds = self._get_parameter_bounds()
         rng = np.random.default_rng(random_state)
+        phi = np.zeros((self.nwalkers, self._get_ndim()), dtype=float)
 
-        n_draw = self.nwalkers if method == "random" else (
-            int(n_candidates) if n_candidates is not None else 100 * self.nwalkers
-        )
-
-        phi = np.zeros((n_draw, ndim), dtype=float)
-
-        # Bounded material parameters are drawn uniformly in log10 space.
         mask = self._get_log10_mask()
         for j, (lo, hi) in enumerate(phys_bounds):
             if lo <= 0 or hi <= 0 or hi <= lo:
                 raise ValueError(f"Invalid bounds for parameter {j}: ({lo}, {hi})")
             if mask[j]:
-                phi[:, j] = rng.uniform(np.log10(lo), np.log10(hi), size=n_draw)
+                phi[:, j] = rng.uniform(np.log10(lo), np.log10(hi), size=self.nwalkers)
             else:
-                phi[:, j] = rng.uniform(lo, hi, size=n_draw)
+                phi[:, j] = rng.uniform(lo, hi, size=self.nwalkers)
 
         idx_noise = len(phys_bounds)
         idx_bias = idx_noise + 1 if self._bias_is_inferred() else None
 
-        if not (np.isfinite(self.sigma_noise_prior) and self.sigma_noise_prior > 0):
-            raise ValueError("sigma_noise_prior must be positive.")
-        phi[:, idx_noise] = rng.exponential(
-            scale=1.0 / self.sigma_noise_prior,
-            size=n_draw,
-        )
+        phi[:, idx_noise] = rng.exponential(scale=1.0 / self.sigma_noise_prior, size=self.nwalkers,)
 
-        # sigma_bias prior (physical, linear coordinate: phi = sigma)
         if idx_bias is not None:
-            if not (np.isfinite(self.sigma_bias_prior) and self.sigma_bias_prior > 0):
-                raise ValueError("sigma_bias_prior must be positive.")
-            phi[:, idx_bias] = rng.exponential(
-                scale=1.0 / self.sigma_bias_prior,
-                size=n_draw,
-            )
-
+            phi[:, idx_bias] = rng.exponential(scale=1.0 / self.sigma_bias_prior, size=self.nwalkers,)
+        
         if method == "random":
             return phi
 
-        km = KMeans(
-            n_clusters=self.nwalkers,
-            n_init=self._KM_NINIT,
-            max_iter=self._KM_MAXITER,
-            random_state=random_state,
-        )
+        km = KMeans(n_clusters=self.nwalkers, random_state=random_state)
         km.fit(phi)
         return km.cluster_centers_
