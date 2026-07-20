@@ -169,5 +169,4 @@ class InferenceProcedure(
         sigma_bias = float(theta[idx]) if self._bias_is_inferred() else self._get_fixed_bias()
         return sigma_noise, sigma_bias
 
-
 __all__ = ["InferenceProcedure"]

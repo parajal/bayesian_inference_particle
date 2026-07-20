@@ -5,67 +5,21 @@ from typing import Optional
 import emcee
 import numpy as np
 from sklearn.cluster import KMeans
-
+import arviz as az
 
 class Sampler:
     """MCMC sampling, diagnostics, and walker initialisation."""
 
-    _DERIVED_RATIOS = (
-        ("G", "eta_p", "lambda", "G = eta_p / lambda"),
-    )
-
     @staticmethod
     def _gelman_rubin_diag(chain: np.ndarray) -> np.ndarray:
-        """Gelman-Rubin R-hat for a physical-space chain shaped (p, walkers, steps)."""
-        p, M, N = chain.shape
-        if M < 2 or N < 2:
-            return np.full(p, np.nan)
+        """Gelman-Rubin R-hat for a physical-space chain shaped (p, chains, length).
+        """
+        p, m, n = chain.shape
 
         W = np.mean(np.var(chain, axis=2, ddof=1), axis=1)
-        B = N * np.var(np.mean(chain, axis=2), axis=1, ddof=1)
-        var_plus = ((N - 1) / N) * W + B / N
-        return np.sqrt((var_plus) / (W))
-
-    def posterior_summaries(self) -> dict:
-        """Return posterior summaries for simple derived quantities such as G."""
-        if getattr(self, "samples", None) is None or len(self.samples) == 0:
-            return {}
-
-        labels = self._get_parameter_labels(latex=False)
-        samples = np.asarray(self.samples, dtype=float)
-        out = {}
-
-        for name, num, den, formula in self._DERIVED_RATIOS:
-            if num not in labels or den not in labels:
-                continue
-            i_num, i_den = labels.index(num), labels.index(den)
-
-            with np.errstate(divide="ignore", invalid="ignore"):
-                g = samples[:, i_num] / samples[:, i_den]
-            g = g[np.isfinite(g)]
-            if g.size == 0:
-                continue
-
-            stats = {
-                "formula": formula,
-                "mean": float(np.mean(g)),
-                "median": float(np.median(g)),
-                "std": float(np.std(g)),
-                "ci95_lo": float(np.percentile(g, 2.5)),
-                "ci95_hi": float(np.percentile(g, 97.5)),
-            }
-
-            if self.sampler is not None:
-                with np.errstate(divide="ignore", invalid="ignore"):
-                    raw = self.sampler.get_chain()
-                    burn = min(int(self.burn_fraction * raw.shape[0]), raw.shape[0] - 2)
-                    chain = self._to_physical(raw[burn:]).transpose(2, 1, 0)
-                    g_chain = (chain[i_num] / chain[i_den])[None, :, :]
-                stats["Rhat"] = float(self._gelman_rubin_diag(g_chain)[0])
-
-            out[name] = stats
-
-        return out
+        B = n * np.var(np.mean(chain, axis=2), axis=1, ddof=1)
+        var_hat = ((n - 1) / n) * W + B / n
+        return np.sqrt(var_hat / W)
 
     def print_results(self) -> dict:
         """Compute and print mean, std, and Gelman-Rubin R-hat for every parameter."""
@@ -76,8 +30,6 @@ class Sampler:
         N = raw.shape[0] - burn
 
         chain = self._to_physical(raw[burn:]).transpose(2, 1, 0)
-        if chain.shape[2] < 3:
-            raise RuntimeError("Not enough post burn-in samples for diagnostics.")
 
         names = self._get_parameter_labels(latex=False)
         means = np.mean(chain, axis=(1, 2))
@@ -112,15 +64,6 @@ class Sampler:
             print("-" * 64)
             print(f"{'Mean Rhat':<14s} {'':>14s} {'':>14s} {mean_rhat:10.4f}")
             print(f"{'Std Rhat':<14s} {'':>14s} {'':>14s} {std_rhat:10.4f}")
-
-        derived = self.posterior_summaries()
-        if derived:
-            print("-" * 64)
-            print("Derived quantities")
-            for name, s in derived.items():
-                print(f"{name:<14s} {s['mean']:14.4e} {s['std']:14.4e} {s.get('Rhat', np.nan):10.4f}")
-            for name, s in derived.items():
-                print(f"  {s['formula']}")
 
     def _warmup_starting_points(self, p0, moves, random_state, progress):
         """Run a short chain and restart near the best warm-up samples."""
@@ -188,8 +131,8 @@ class Sampler:
 
         moves = [
             (emcee.moves.StretchMove(a=2.0), 0.6),
-            (emcee.moves.DEMove(), 0.25),
-            (emcee.moves.GaussianMove(0.01), 0.15),
+            (emcee.moves.DEMove(), 0.20),
+            (emcee.moves.GaussianMove(0.01), 0.20),
         ]
 
         if warmup:

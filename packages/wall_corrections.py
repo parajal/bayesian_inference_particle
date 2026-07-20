@@ -11,14 +11,8 @@ import numpy as np
 class WallCorrections:
     """Wall-correction formulas."""
 
-    _MIN_GAP_FACTOR = 1e-4
-
-    def _radius(self):
-        """Particle radius; defaults to 1.0 when used standalone (no InferenceProcedure)."""
-        return float(getattr(self, "a", 1.0))
-
     def _min_gap(self):
-        return self._MIN_GAP_FACTOR * self._radius()
+        return 1e-4 * self.a
 
     def _wall_factors(self, delta):
         delta = max(float(delta), self._min_gap())
@@ -27,7 +21,7 @@ class WallCorrections:
     def zeng_parallel(self, delta):
         """Zeng interpolant for parallel motion near a wall."""
         delta = np.asarray(delta, dtype=float)
-        a = self._radius()
+        a = self.a
 
         return (
             1.028
@@ -38,7 +32,7 @@ class WallCorrections:
     def _brenner_perpendicular_direct(self, delta, n_terms=100):
         """Brenner series."""
         delta = np.asarray(delta, dtype=float)
-        a = self._radius()
+        a = self.a
         beta = np.arccosh((delta + a) / a)
         n = np.arange(1, n_terms + 1, dtype=float)
         beta_n = np.expand_dims(beta, axis=-1)
@@ -66,10 +60,10 @@ class WallCorrections:
     def brenner_perpendicular(self, delta, n_terms=100):
         """Brenner series, cached for fast MCMC calls."""
         cache = getattr(self, "_brenner_cache", None)
-        if cache is None or cache["a"] != self._radius() or cache["n_terms"] != n_terms:
-            grid = np.geomspace(1e-3 * self._radius(), 1e2 * self._radius(), 3000)
+        if cache is None or cache["a"] != self.a or cache["n_terms"] != n_terms:
+            grid = np.geomspace(self._min_gap(), 1e2 * self.a, 3000)
             cache = {
-                "a": self._radius(),
+                "a": self.a,
                 "n_terms": n_terms,
                 "delta": grid,
                 "value": self._brenner_perpendicular_direct(grid, n_terms=n_terms),
