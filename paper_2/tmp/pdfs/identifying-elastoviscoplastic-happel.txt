@@ -1,0 +1,1188 @@
+     Identifying elastoplastic parameters with Bayes’ theorem considering double
+                          error sources and model uncertainty
+
+                                 H. Rappela,b , L.A.A. Beexa,∗, L. Noelsb , S.P.A. Bordasa,c
+      a Institute of Computational Engineering, Faculty of Science, Technology and Communication, University of Luxembourg,
+
+                          Maison du Nombre, 6, Avenue de la Fonte, 4364, Esch-sur-Alzette, Luxembourg.
+         b Computational & Multiscale Mechanics of Materials (CM3), Department of Aerospace and Mechanical Engineering,
+
+                     University of Liège, Quartier Polytech 1, Allée de la Découverte 9, B-4000 Liège, Belgium.
+             c School of Engineering, Cardiff University, Queen’s Buildings, The Parade, Cardiff CF243AA, Wales, UK.
+
+
+
+
+     Abstract
+     We discuss Bayesian inference for the identification of elastoplastic material parameters. In addition to
+     errors in the stress measurements, which are commonly considered, we furthermore consider errors in the
+     strain measurements. Since a difference between the model and the experimental data may still be present
+     if the data is not contaminated by noise, we also incorporate the possible error of the model itself. The
+     three formulations to describe model uncertainty in this contribution are: (1) a random variable which is
+     taken from a normal distribution with constant parameters, (2) a random variable which is taken from a
+     normal distribution with an input-dependent mean, and (3) a Gaussian random process with a stationary
+     covariance function. Our results show that incorporating model uncertainty often, but not always, improves
+     the results. If the error in the strain is considered as well, the results improve even more.
+     Keywords: Bayesian inference, Bayes’ theorem, stochastic identification, parameter identification,
+     elastoplasticity, plasticity, model uncertainty
+
+
+     1. Introduction
+
+         A frequent approach for the identification of material parameters in solid mechanics is the least squares
+     method (LSM; see [1]), in which the squared difference between the experimental output and the model
+     response is minimised with respect to the material parameters. The result of such an approach is a de-
+5    terministic estimate of the parameter values. A true insight in the certainty of each identified parameter
+     value lacks however, as only a single residual forms the measure for the quality of the ensemble of identified
+     values. Although some advanced formulations of LSM incorporate statistical information [2, 3], they as-
+     sume that the measurement error is symmetrically distributed. For nonlinear models furthermore, linearised
+     approximations are required to estimate the parameter distributions [4].
+10       An alternative identification method is the Bayesian approach which allows accounting for modelling
+     uncertainty and the statistical noises of the experimental devices [5]. The result of Bayesian inference (BI)
+     is a probability density function (PDF) as a function of the parameters of interest. This PDF is called
+     the posterior distribution in Bayesian terminology. Once the posterior distribution is obtained, statisti-
+     cal summaries of the posterior such as mean, the value at which the posterior PDF is maximal (i.e. the
+15   ‘maximum-a-posteriori-probability’ or ‘MAP’ point) and the covariance matrix need to be evaluated. With
+     the exception of a few cases, numerical frameworks need to be employed for this. Markov chain Monte Carlo
+     (MCMC) techniques [6–9] are probably the most frequently employed approaches for sampling PDFs.
+         Bayesian inference (BI) was used in various previous studies to identify material parameters. The earliest
+     work known to the authors is that of Isenberg [10], in which it was used to identify elastic parameters
+
+
+       ∗ Corresponding author
+
+        Email address: lars.beex@uni.lu, l.a.a.beex@gmail.com (L.A.A. Beex)
+
+
+     Preprint submitted to Probabilistic Engineering Mechanics                                                        July 18, 2018
+20   in 1979. In other works, this framework was employed to identify elastic material parameters based on
+     dynamic responses [11–13]. BI was also used to identify the elastic constants of composite laminates in
+     [14–17]. Spatially varying elastic parameters were furthermore identified using BI by Koutsourelakis [18].
+     An introduction to identify Young’s moduli employing Bayesian inference can be found in [19].
+         Elastoplastic parameters were also identified using BI. Parameters in linear elasticity-perfect plasticity
+25   were identified by Most [20], while Bayesian updating via a polynomial chaos expansion for an elastoplastic
+     system was considered by Rosić et al. [21]. In addition to elastoplastic material models, Bayesian updating
+     procedures were employed to identify material parameters of hysteretic models [22, 23] and other nonlinear
+     material models such as viscoelasticity and creep [24–26].
+         In none of the aforementioned studies, the fact that the model itself may not be perfectly equipped to
+30   capture the experimental measurements was considered. A framework that can deal with this was neverthe-
+     less introduced by Kennedy and O’Hagan [27] in 2001, which is currently known as the ‘KOH’ framework
+     and was employed in [18, 28–32]. Another issue that has received little attention in previous studies is that
+     not only the output (e.g. the stress measurements) can be polluted by statistical noise, but the input as well
+     (e.g. the strain measurements).
+35       The aim of this study is to present a Bayesian identification framework for elastoplasticity that can
+     treat uncertainties in both the output and the input, whilst also accounting for model uncertainty. The
+     framework is constructed to deal with experimental data coming from monotonically increasing, uniaxial
+     tensile tests. Output errors (the noise in the stress measurements) are commonly considered in identification
+     approaches using BI, but input errors (i.e. the errors in the strains) seem to remain untreated in Bayesian
+40   identification approaches. They may be worthwhile to include, because of the use of the clamp displacement
+     as a measure to derive strains often overestimates the measured strains due to slip in the clamps. Even if
+     digital image correlation (DIC) is employed to determine strains, errors may be included due to the finite
+     accuracy of (1) the applied pixel patterns, (2) the finite resolution of the images, and (3) the algorithms of
+     the DIC software, which come with different user-selected parameters (such as the size of facets) and finite
+45   minimisation residuals.
+         Bayesian updating including uncertainties in both output and input was yet employed in [33] for linear
+     dynamic systems and was aimed at identifying modal parameters. The framework uses the assumption that
+     the posterior can be approximated as a Gaussian distribution at the MAP point, which may be considered as
+     a limitation. Studies in other fields can also be found that treat two error sources [34–39], but those studies
+50   effectively employ linear regression.
+         The KOH framework to address model uncertainty was furthermore not employed in any of the afore-
+     mentioned studies. Model uncertainty can be incorporated in several ways in the KOH framework. The
+     simplest way is to describe it with a constant variable, which is to be identified [30]. One can also use a
+     random variable and treat the parameters of the random variable’s distribution as unknown parameters that
+55   need to be identified as well (and hence, they appear in the posterior) [30, 40]. Instead of incorporating a
+     deterministic variable, one can include a function of which the parameters are deterministic [41]. One can
+     also include a random variable and assume its distribution’s parameters to be dependent on the input [40].
+     Model uncertainty can also be represented by a Gaussian process [27, 32, 42]. More information on different
+     ways to incorporate model uncertainty can be found in [40].
+60       In this contribution, we investigate the effect of three model uncertainty formulations (i.e. a correction
+     of the uniaxial material response in terms of the strain from ideal elasticity or elastoplasticity equations)
+     on the parameter identification in elasticity and elastoplasticity: (1) a random variable which is assumed
+     to come from a normal distribution with constant parameters, (2) a random variable which is assumed to
+     come from a normal distribution with a mean that depends on the input (i.e. the strain) and (3) a Gaussian
+65   process with a zero mean and a stationary covariance function. On top of that, we also investigate how the
+     incorporation of the input error influences the results.
+         The structure of the paper is as follows. Section 2 briefly discusses the expressions of the considered
+     material models for uniaxial, monotonic tension. In Section 3, the main concepts of Bayesian frameworks
+     for parameter identification are presented. In Section 4, the employed model uncertainty functions are
+70   elaborated, including the corresponding likelihood functions. Section 5 presents the Bayesian approaches that
+
+
+
+                                                           2
+      incorporate both the measurements errors in the stresses and in the strains, as well as the model uncertainty.
+      Indicative results are presented in Section 6. The measurement data in this section are artificially generated,
+      so that we can compare the identified parameter distributions with the true values. Finally, this contribution
+      is closed with conclusions (Section 7).
+ 75   Remark. Throughout this paper bold capitals and symbols denote matrices and bold lower case letters and
+      symbols are vectors or columns.
+
+      2. Material models
+
+         In this section we present the stress-strain relations of the considered material models for monotonic
+      uniaxial tensile tests. The material models presented in this section are: linear elasticity and linear elasticity
+ 80   with linear hardening.
+
+      2.1. Linear elasticity
+          In linear elasticity, the stress-strain relation is described fully linearly. This relation can be written as
+      follows for uniaxial tension:
+
+                                                        σ(, x) = E,                                               (1)
+      where σ is the stress,  is the strain and x is the vector containing the material parameters, which here only
+ 85   consists of Young’s modulus E.
+
+      2.2. Linear elasticity-linear hardening
+          In a linear elastic-linear hardening material model, the elastic response is again described linearly in
+      terms of the elastic strain. Plastic deformation occurs with linear work hardening when the stress reaches
+      initial yield stress σy0 . In other words, the stress continues to increase (linearly) when plastic deformation
+ 90   takes place. The stress-strain relation for this model during monotonic, uniaxial tension reads:
+                                                  (                                σy0
+                                        σ(, x) =
+                                                    E                   if  ≤ E ,                             (2)
+                                                           HE        σ             σ
+                                                    σy0 + H+E     − Ey0    if  > Ey0
+                                                                                 T
+      where H denotes the hardening modulus and hence, x = E            σy0   H        .
+
+      3. Bayesian parameter identification
+
+         In this section some concepts of Bayesian inference are explained. First, a rather standard Bayesian
+      framework for parameter identification is presented. Subsequently, we present a Bayesian approach that
+ 95   incorporates a generalised model error term in the KOH framework. The parametrised formulations for the
+      employed model errors and their corresponding likelihood functions are presented in Section 4 in more detail.
+
+      3.1. Bayesian inference fundamentals
+                                T
+          Let y = y1 · · · ynm be a vector of nm measurements and let x be a vector of np parameters which
+      are to be identified. Using the Bayes’ theorem, one can write:
+
+                                                              π(x)π(y|x)
+                                                   π(x|y) =              ,                                          (3)
+                                                                 π(y)
+100   where π(x) denotes the prior distribution (i.e. the PDF that represents one’s assumed prior knowledge about
+      the parameters, e.g. the fact that the Young’s modulus cannot be smaller than zero), π(y|x) denotes the
+      likelihood function (i.e. the PDF that measures the likelihood that measurements y are observed, given a
+      set of parameter values x), π(x|y) denotes the posterior distribution (i.e. the PDF that describes the chance
+
+
+                                                              3
+      to obtain parameters x, given the measurements y) and π(y) is called the evidence. As the measured data
+105   (y) are already known and hence, y are not variables in the posterior (π(x|y)), the evidence is a constant
+      number (π(y) = C ∈ R+ ) which is independent of the parameters. Consequently, Eq. (3) behaves as follows:
+
+                                                   π(x|y) ∝ π(x)π(y|x).                                             (4)
+         Since the statistical quantities of interest, such as the mean, covariance and MAP point, are the same for
+      Eq. (3) as for Eq. (4), it is sufficient to deal with Eq. (4). Next, we will discuss likelihood function π(y|x) in
+      the presence of a general model error term.
+
+110   3.2. Likelihood function
+          In the KOH framework, the relation between a stress measurement and the model response is written as
+      [40]:
+
+                                                        y = σtrue + ωy ,                                            (5)
+      with
+
+                                                   σtrue = σ(, x) + d(),                                          (6)
+      where ωy denotes the error in the stress measurement (output error), which is considered to be a realisation
+115   from the PDF that we call here the stress noise distribution. Furthermore, d denotes the model uncertainty
+      which can be assumed to be dependent on the input (i.e. strain  here). Assuming that we know the form
+      of the noise distribution, the likelihood function reads:
+
+                                         π(y|x, xd , xωy ) = πωy (y − σ(, x) − d()),                              (7)
+      where xd denotes the parameter vector of the model uncertainty and xωy denotes the vector of parameters of
+      the stress noise distribution. Often, the stress noise distribution is assumed to be a Gaussian distribution with
+120   s2ωy variance and zero mean. Frequently, the parameters for both the model uncertainty (d) and the stress
+      noise distribution (i.e. sωy for the Gaussian distribution with zero mean) are unknown and consequently, they
+      must also be identified, i.e. they appear as variables in the posterior. As uniaxial tensile tests are generally
+      performed in well-controlled tensile testers of which the parameters the noise distribution of the load cell
+      can be rather straightforwardly calibrated, we assume that the stress noise distribution and its parameters
+125   can be defined through a noise calibration process.
+          Using Eqs. (4) and (7), the posterior distribution for a single measurement can be written as:
+
+                                      π(x, xd |y) ∝ π(x)π(xd )πωy (y − σ(, x) − d()),                             (8)
+      where π(x) denote π(xd ) are the prior PDFs for the model parameters and the model uncertainty parameters,
+      respectively. Clearly, we have assumed here that the probabilities of the model parameters and of the model
+      uncertainty are independent (π(x, xd ) = π(x)π(xd )). Furthermore, π(x, xd |y) denotes the joint PDF for x
+130   and xd . For the case of nm independent measurements, the final likelihood function is a product of the
+      likelihood functions for each output yi (coming with input i ):
+                                                        nm
+                                                        Y
+                                        π(y|x, xd ) =         πωy (yi − σ(i , x) − d(i )).                        (9)
+                                                        i=1
+
+         Once the posterior is established, one can employ numerical sampling techniques to approximate the
+      posterior’s statistical summaries (e.g. mean value, MAP point or covariance matrix). In this contribution
+      the adaptive Metropolis algorithm [43] is employed to sample the posterior. The algorithm is elaborated in
+135   Appendix A.
+
+
+
+
+                                                                  4
+      4. Model uncertainty
+
+         In Section 3, Bayesian inference for a general model uncertainty was discussed. In this section, we present
+      the likelihood functions for the three formulations of model uncertainty (d()), see Eq. (6). As mentioned
+      before, these three formulations are: (1) a random variable coming from a normal distribution with a constant
+140   mean and variance, (2) a random variable which comes from a normal distribution with a constant variance
+      and a mean which is a polynomial function in terms of the input (the strain), and (3) a Gaussian random
+      process with a stationary covariance function.
+         Important to realise again is that the stress noise distribution is described by a normal distribution with
+      zero mean and s2ωy variance, i.e. ωy ∼ N (0, s2ωy ). As mentioned before, we assume that sωy is known (see
+145   Subsection 6.1).
+
+      4.1. Random variable coming from a normal distribution with constant parameters
+          In the first case, we describe the difference between the material model and the true response as reali-
+      sations from a normal distribution with mean d and variance s2d , i.e. N (d, s2d ). d and s2d are unknown and
+      must be identified by the Bayesian updating process. Prior knowledge about them can be incorporated in
+150   the prior distribution. The likelihood function of for nm measurements, previously expressed in Eq. (9), can
+      now be written as:
+
+                                      π(y|x, xd ) = N (σ(, x) + d1nm , (s2ωy + s2d )Inm ),                   (10)
+                                                                                                  T
+      where σ(, x) denotes the vector of model responses for each input σ(1 , x) · · · σ(nm , x) , 1nm denotes
+      the unit vector of size nm × 1, Inm denotes the identity matrix of size nm × nm and xd denotes the parameter
+                                                        T
+      vector for the model uncertainty i.e. xd = d sd . Eq. (10) clearly shows that this model uncertainty adds
+155   a correction to the mean and increases the likelihood’s variance by s2d .
+
+      4.2. Random variable coming from a normal distribution with an input dependent mean
+         In the second case, we describe the difference between the model response and the true response as a
+                                                                                                     PL input.
+      random variable, that originates from a normal distribution of which the mean is a function of the
+      We use polynomial functions to describe the relation between the mean and the input, d() = l=0 al l ,
+                                                                              T
+160   resulting in L+2 model uncertainty parameters: xd = a0 a1 · · · aL sd . Consequently, the likelihood
+      function reads:
+
+                                     π(y|x, xd ) = N (σ(, x) + d(), (s2ωy + s2d )Inm ),                   (11)
+                                        T
+      where d() = d(1 ) · · ·   d(nm ) . Note that increasing the polynomial order can lead to model noniden-
+      tifiability [40].
+
+      4.3. Gaussian process with a stationary covariance function
+165      In the work of Kennedy and O’Hagan [27], model uncertainty was described by a Gaussian process [44],
+      entailing that the error between the model and the true response is nonlocal in terms of the strain (i.e. the
+      input). Following [27] and [42] describing a Gaussian process (GP) with a zero mean, we write:
+
+                                                 d ∼ GP(0, λ2 c(·, ·|ψ)),                                      (12)
+      where c is the squared exponential correlation function:
+                                                              ( −  )2 
+                                                                   i     j
+                                          c(i , j |ψ) = exp −             ,                              (13)
+                                                                     2ψ 2
+                                                                                T
+      where λ2 denotes the variance and ψ the length scale, yielding xd = λ ψ . i and j furthermore denote
+170   two input values which may be the same (i, j ∈ {1, · · · , nm }). Note that the zero mean in the Gaussian
+
+
+                                                            5
+      process implies that no bias is included that increases the chance for d() to be positive or negative. The
+      likelihood function now reads:
+
+                                         π(y|x, xd ) = N (σ(, x), ΓGP + s2ωy Inm ),                            (14)
+      where
+
+                                            λ2 c(1 , 1 |ψ)                 λ2 c(1 , nm |ψ)
+                                                                                              
+                                                                 ···
+                                    ΓGP =         ..            ..                   ..
+                                                                                               .               (15)
+                                                                                              
+                                                    .                .                 .
+                                               λ2 c(nm , 1 |ψ) · · ·    λ2 c(nm , nm |ψ)
+         Eq. (15) clearly shows that the errors in the stress measurements are correlated in a GP. This implies that
+175   the updating procedure is not performed by a multiplication operator as in Eq. (9). Instead, we consider y to
+      be a realisation from a multivariate Gaussian distribution with non-zero off-diagonal components (unlike the
+      cases in Subsections 4.1 and 4.2, in which the covariance matrix of the likelihood function only has non-zero
+      components on its diagonal).
+
+
+      5. Model uncertainty and noise in the strain
+
+180       In the previous sections, we have assumed that the strain measurements are perfect (i.e. they are not
+      polluted by noise). In this section, we reformulate the framework such that it can also treat errors in the
+      strain. The errors in the stress and in the strain are assumed to be independent of each other, as the devices
+      to measure the forces and strains or clamp displacements are independent of each other (e.g. if a load cell and
+      digital image correlation are used). We first give the general likelihood function in case model uncertainty
+185   and the noise in the strain is incorporated (besides the commonly incorporated noise in the stress). Then,
+      we specify the likelihood functions for the three material descriptions for monotonically increasing uniaxial
+      tension, if only the error in the noise is incorporated. Subsequently, we include model uncertainty for the
+      two material descriptions.
+
+      5.1. General likelihood function
+190       In this subsection, a general likelihood function is presented that incorporates model uncertainty as well
+      as the input error (and the output error obviously). As mentioned in Subsection 3.2, the experimental output
+      in the KOH framework [27] can be written as follows:
+
+                                                   y = σ(, x) + d() + ωy .                                    (16)
+      We now assume that each strain measurement, ∗ , is also polluted by some statistical error, ω∗ , in an
+      additive manner:
+
+                                                            ∗ =  + ω∗ ,                                      (17)
+195   where  is the true strain. Similar to the error in the stress measurements, we assume that the strain errors
+      are realisations from a Gaussian distribution with a zero mean and variance s2ω∗ . Using Bayes’ theorem, we
+      can now write:
+
+                                                          π(y|x, xd , )π(|∗ )π(x)π(xd )π(∗ )
+                                  π(x, xd , |y, ∗ ) =                                          ,              (18)
+                                                                       π(y|∗ )π(∗ )
+      or
+
+                                     π(x, xd , |y, ∗ ) ∝ π(y|x, xd , )π(|∗ )π(x)π(xd ).                    (19)
+
+
+
+
+                                                                  6
+         The joint distribution of the material parameter vector x and model uncertainty parameter vector xd
+200   reads:
+                                                                 Z b
+                                     π(x, xd |y, ∗ ) ∝                π(y|x, xd , )π(|∗ )d π(x)π(xd ),                     (20)
+                                                                  0
+
+      where b denotes the physical upper bound of the tensile tester (i.e. the ratio of the original length of
+      the specimen and the maximum distance that the clamps can displace). Assuming again that the noise
+      distributions for both the stress and strain measurements are known, Eq. (20) reads:
+                                               Z b
+                          π(x, xd |y, ∗ ) ∝           πωy (y − σ(, x) − d())πω∗ (∗ − )d π(x)π(xd ),                      (21)
+                                                   0
+      where πωy denotes the noise distribution for a stress measurement and πω∗ denotes the noise distribution
+205   for a strain measurement. Note again that one may assume a form for both noise distributions and then
+      treat the parameters of both distributions as unknowns, which are to be identified together with the material
+      parameters and the model uncertainty parameters in the Bayesian updating procedure. However, we assume
+      that these noise parameters can be identified using a separate calibration procedure (see Subsection 6.1).
+          For nm measurements, the posterior reads:
+                                                           Z b         Z b
+                                 π(x, xd |y, ∗ ) ∝           ···            π(y|x, xd , )π(|∗ )dπ(x)π(xd ),                (22)
+                                                            0           0
+                                                           | {z          }
+                                                                 nm
+                               T                      T
+      where y = y1 · · · ynm , ∗ = ∗1 · · · ∗nm . We furthermore use now π(|∗ ) = N (0, s2ω∗ Inm ). Inm
+                                        
+210
+
+      denotes the identity matrix of size nm × nm . In case of nm independent measurements, the posterior reads:
+                                             nm Z b
+                                             Y
+                        π(x, xd |y, ∗ ) ∝                 πωy (yi − σ(, x) − d())πω∗ (∗i − )d π(x)π(xd ).                (23)
+                                             i=1       0
+
+      The integrals in Eqs. (20)-(23) are either numerically approximated (e.g. using Monte Carlo integration [45])
+      or analytically determined (see next subsection).
+
+      5.2. The likelihood function considering input error
+215   5.2.1. Linear elasticity
+          In case of linear elasticity during monotonically increasing, uniaxial tension, Eq. (1) provides the model
+      response, whilst the model uncertainty in Eq. (21) is ignored for now. Considering that ωy ∼ N (0, s2ωy ) and
+      ω∗ ∼ N (0, s2ωy ), the likelihood function for a single measurement reads:
+                                                        Z b
+                                                                    (y − E)2   (∗ − )2 i
+                                                                h                          
+                                                  1
+                                π(y|x, ∗ ) =               exp −             +              d.                (24)
+                                              2πsωy sω∗ 0             2s2ωy      2s2ω∗
+         By computing the integral in Eq. (24) analytically, it can be rewritten as follows:
+                                       √             p − p 2   b − p              −p 
+                              ∗          p3               2      1            1            1
+                      π(y|x,  ) = √            exp −               erf √        − erf √      ,                                 (25)
+                                   2 2πsωy sω∗            2p 3           2p3             2p3
+220   where erf(·) is the error function [46] and p1 , p2 and p3 are formulated as follows:
+
+                                 E ys2ω∗ + s2ωy ∗                     s2ωy (∗ )2 + s2ω∗ y 2             (sωy sω∗ )2
+                          p1 =                             , p2 =                                 , p3 =                    .   (26)
+                                   E 2 s2ω∗ + s2ωy                         E 2 s2ω∗ + s2ωy               E 2 s2ω∗ + s2ωy
+      In case of nm measurements, π(y|x, ∗ ) is obtained using the product in Eq. (23).
+
+
+
+                                                                               7
+      5.2.2. Linear elasticity-linear hardening
+                                                                                               T
+          For linear elasticity-linear hardening, the unknown parameters are x = E σy0 H . Again substitut-
+      ing Eq. (2) in Eq. (21) results in the following likelihood function for a single measurement:
+
+
+                         1
+                                       
+                                           √          p − p2 h  σy0 − p              −p i
+                                                        2                     1                1
+        π(y|x, ∗ ) = √                        p3 exp −       1
+                                                                 erf E√            − erf √          +
+                     2 2πsωy sω∗                        2p3              2p3                2p3
+                                                                                                         √
+                                                                            p ∗         p∗            σy0 p∗    p∗
+                                                           ∗ ∗    ∗2 h       p 1 a − √  2                 1
+                                                                                                             − √2 ∗ i
+                                                 1       p p −p                        p1∗           E       p1
+                                               p ∗ exp − 1 3 ∗ 2       erf        √            − erf       √           , (27)
+                                                  p1         2p1                    2                        2
+225   where p1 , p2 and p3 are again given by Eq. (26) and p∗1 , p∗2 and p∗3 are expressed as follows:
+                                              2                                                        2
+                                       HE                                              HE          HE           σy0
+                                       H+E               1                  (y − σy0 ) H+E +       H+E           E         ∗
+                           p∗1 =                    +           ,   p∗2 =                                             +         ,
+                                       s2ωy             s2ω∗                            s2σ                              s2ω∗
+                                                                                                  2          2                  (28)
+                                                                 HE y0              σ     HE              σy0
+                                       (y − σy0 )2 + 2(y − σy0 ) H+E E +                  H+E              E                ∗ 2
+                                                                                                                          ( )
+                             p∗3 =                                                                                    +         .
+                                                                             s2ωy                                         s2ω∗
+          In the following subsection we discuss the formulations of the likelihood functions if model uncertainty
+      is incorporated as well.
+
+      5.3. The likelihood function considering input error and model uncertainty
+          Adding input-dependent model uncertainty renders even the likelihood function of the linear elastic
+230   material model impossible to analyse analytically. Consequently, we employ Monte Carlo integration to
+      numerically approximate the integral of Eq. (20). π(y|x, xd , ) for all formulations of model uncertainty are
+      given in Eqs. (10), (11) and (14).
+          Note that in the case of the GP, the components of the measurement vector y are correlated. This
+      means that updating, according to the multiplication operation in Eq. (23), is not possible. Instead, we
+235   consider that measurement vector y is a realisation from a multivariant Gaussian distribution with non-zero
+      off-diagonal components. In this case, Eq. (22) is used to construct the posterior.
+
+      6. Results
+          This section presents some examples of the Bayesian framework for the elastic and elastoplastic material
+      models and uniaxial tensile data. The main points we aim to investigate are: (1) the influence of incorporating
+240   the input error, (2) the influence of incorporating the three types of model uncertainty and (3) the influence
+      of incorporating both the input error and model uncertainty. (Naturally, the output error is considered in
+      all results as well.)
+          For this purpose the measurements are generated numerically using responses which deviate from the
+      constitutive responses. Next, Bayesian inference is used to identify the parameters of the material models
+245   given in Section 2. To investigate the effect of incorporating the input error and model uncertainty on the
+      identification results, posteriors and posterior predictions (see Appendix B) are furthermore presented for
+      various cases and compared with the true parameter values and measurements. However, we first start with
+      the calibration of the two measurement noises for uniaxial tensile tests. Note that all results are obtained
+      using the adaptive Metropolis method for 5 × 104 samples, whilst burning the first 1.5 × 104 samples.
+
+250   6.1. Noise calibration
+          We start the noise calibration procedure by acquiring measurement data without the use of actual spec-
+      imens. Stress-strain measurements as schematically presented in Fig. 1. They show that both noises can be
+      represented as individual normal distributions with zero means and their own variances. In this contribution
+      we have assumed sωy = 0.01 GPa and sω∗ = 5 × 10−5 .
+
+
+                                                                               8
+                                          σ
+
+
+
+
+                                              πnoise (ω)
+
+                                                                                     
+
+
+
+
+      Figure 1: Schematic of the stress-strain measurements (red circles) of the ‘noise calibration experiments’, including an isoline
+      if both noise distributions would be represented by a bivariate normal distribution (dashed).
+
+
+
+255   6.2. Linear elasticity
+      6.2.1. Input error
+          In the first example, the added value of including the strain error is investigated for linear elasticity. The
+      measurement data are generated using the following non-linear expression:
+                                                                           E
+                                                           σ(, a, E) =          ,                                               (29)
+                                                                          1 + a
+      where E = 210 GPa and a = 0.015. 20 measurements are generated using the same noise distributions as
+260   identified in the previous subsection. Parameter a in Eq. (29) is chosen such that the difference between the
+      non-linear expression used to generate the measurements and its linear approximation in the neighbourhood
+      of  = 0 (i.e. σ = 210) is not too large (see Fig. 2(a)). We consider the following prior for the Young’s
+      modulus:
+                                                                   2
+                                                                       
+                                               exp − (E−E    prior )
+                                                                         if E ≥ 0
+                                                          2s2
+                                       π(E) ∝               E prior                ,                           (30)
+                                               0                        otherwise
+
+      with E prior = 150 GPa and sE prior = 50 GPa.
+265       Fig. 2(b) presents the marginal posterior PDF of the Young’s modulus for in case the output error alone
+      is included (red curve) and for the case in which both the output and input errors are included (blue curve).
+      Incorporating both error sources clearly results in a wider posterior. However, none of the resulting posteriors
+      contains true value E = 210 GPa. The posterior mean and variance are given in Table 1.
+          The posterior predictions are shown in Fig. 3. One can observe that incorporating both error sources
+270   results in a wider envelope. This wider envelope includes more measurements, meaning that incorporating
+      both error sources results in a more likely result.
+
+      6.2.2. Input error and model uncertainty
+          The effect of model uncertainty on the resulting posterior is studied now. First, we only include the case
+      with output error but without input error. The prior used for the Young’s modulus is the same mentioned
+
+
+
+                                                                     9
+                                    (a)                                                               (b)
+
+      Figure 2: Linear elasticity: (a) The experimental data generated for the first example, including the curve from which the data
+      points are generated and its linearisation at  = 0. One can see that parameter a is chosen such that the difference between line
+      210 and the true model is not large for small strains. (b) The marginal posterior PDF of the Young’s modulus if the stress
+      error alone is incorporated (red curve) and if the stress and strain errors are incorporated (blue curve). Considering both errors
+      results in a wider distribution of the Young’s modulus, but none of the distributions contain the true value.
+
+
+
+275   previously. For the case in which model uncertainty is considered as a random variable coming from a
+      Gaussian distribution with an input-dependent mean, we consider the following expression for its mean:
+
+                                                         d() = a0 + a1  + a2 2 .                                                (31)
+         In case model uncertainty is modelled as a random variable, either coming from a Gaussian distribution
+      with constant parameters or coming from a Gaussian distribution with an input-dependent mean, infinitely
+      wide uniform distributions are used as prior distributions for the model uncertainty parameters (xd ). How-
+280   ever, for the case in which model uncertainty is described as a Gaussian process with a stationary covari-
+      ance function, we have considered the following prior distributions for the model uncertainty parameters
+                  T
+      (xd = λ ψ ):
+                                                                  2
+                                                                      
+                                             exp − (λ−λ2 prior )       if λ ≥ 0
+                                                          2s
+                                      π(λ) ∝                 λprior               ,                           (32)
+                                             0                         otherwise
+      and,
+                                                                2
+                                             exp − (ψ−ψ2
+                                                          prior )
+                                                                             if ψ ≥ 1.578 × 10−5
+                                                      2s
+                                      π(ψ) ∝            ψ prior                                       ,                            (33)
+                                              0                              otherwise
+                                             
+
+      where λprior = 0.025 GPa, sλprior = 0.0083 GPa, ψ prior = 0.0006 and sψprior = 0.0003.
+285       It must be noted that if infinitely wide uniform distributions are used for the model uncertainty parameters
+      of the Gaussian process, the MCMC algorithm fails to converge. Using the fact that the model uncertainty
+      function (d()) is a smooth function, we have chosen the mean of the prior for the length scale parameter
+      (ψ prior ) to be half of the maximum occurring strain. The standard deviation is chosen to be relatively large.
+      To prevent negative length scale parameters and length scale parameters smaller than the minimum distance
+290   between two consecutive strains to be realised from the prior distribution, we have set a lower bound on
+      the prior distribution. We have chosen the value of the mean of the variance of the GP (λprior in Eq. (32))
+
+
+                                                                     10
+             (a) Error in the stress measurements only                (b) Error in both the stress and strain measurements
+
+      Figure 3: Linear elasticity: The measurements, the posterior mean response and the posterior predictions. One can observe
+      that the incorporation of both error sources results in a wider envelope, thereby including more measurements.
+
+
+
+      as 10% of the maximum occurring stress and the standard deviation such that 99.7% of the realisations
+      coming from the prior distribution remain below 20% of the maximum occurring stress. A lower bound is
+      also included (Eq. (32)).
+295       Fig. 4(a) shows that the incorporation of model uncertainty increases the widths of the posteriors, such
+      that the true value is possible to be generated from it. On the other hand, the MAP point (point estimator)
+      when model uncertainty is not incorporated is closer to the true value than all the other posteriors’ MAP
+      points.
+          An important point to mention here is that in case model uncertainty is incorporated as a random
+300   variable coming from a normal distribution with an input-dependent mean, the marginal posterior PDF is
+      approximately the same as the prior of the Young’s. The reason for this is the linear term that is present in
+      the input-dependent mean (a1  in Eq. (31)), which is also present in the model (E). If we ignore the linear
+      term and instead use the following expression for the input-dependent mean:
+
+                                                         d() = a0 + a2 2 ,                                              (34)
+      we obtain the PDF presented in Fig. 4(b). The figure shows that the marginal posterior includes the true
+305   value of the Young’s modulus. The MAP point has furthermore moved substantially closer to the true
+      value. This can be caused by the fact that the true response (Eq. (29)) is not highly nonlinear and hence,
+      its difference with the linear approximation (here E) can be rather accurately described by the remaining
+      terms of the Taylor expansion of the true model.
+          The posterior predictions for the three kinds of model uncertainty are presented in Figs. 5(a), 5(c) and
+310   5(e). The diagrams show that if model uncertainty is considered as a random variable coming from a normal
+      distribution, either with constant parameters or an input-dependent mean, more measurements are included
+      in the envelope than if model uncertainty is represented by a Gaussian process. By comparing Figs. 3
+      and 5(e) furthermore, it becomes clear that more measurement data is present in the posterior prediction’s
+      envelope if both errors in the stress and strain are considered than if model uncertainty is considered as a
+315   Gaussian process without input error. This can be caused by the fact that, although the posterior is wider,
+      the mean and MAP point are further from the true value if model uncertainty is described by a Gaussian
+      process (see Fig. 4(a) and Table 1).
+          The effect of treating the input error as well as incorporating model uncertainty is presented in Fig. 6 for
+      the marginal posteriors. Note that we have used the same priors as before. One can see that the posteriors
+
+
+                                                                 11
+                               (a)                                                               (b)
+
+Figure 4: Linear elasticity: Marginal posteriors for the Young’s modulus for different types of model uncertainty. (a) The
+mean for model uncertainty as a random variable coming from a Gaussian distribution with input-dependent mean, is given by
+Eq. (31). One can observe that incorporating any of the model uncertainties results in wider posterior distributions. Although
+the MAP point moves further away from the true value for all model uncertainty cases, all their posteriors include the true
+value, whereas the posterior for the case without model uncertainty does not include the true value. It must furthermore be
+noted that the posterior for the case in which model uncertainty is treated as a random variable coming from a Gaussian
+distribution with an input-dependent mean, is practically the same as the prior of the Young’s modulus. (b) The same marginal
+posteriors as in (a), except that the case in which model uncertainty is modelled as a random variable coming from a normal
+distribution with an input-dependent mean, Eq. (34) is used for the mean instead of Eq. (31). One can see that the MAP point
+has moved considerably closer to the true value. This can be caused by the fact that the true stress-strain behaviour given in
+Eq. (29) is not highly nonlinear and the difference between σ(, a, E) in Eq. (29) and linear elasticity (E) can rather accurately
+be represented by the remaining terms of a Taylor expansion for σ(, a, E).
+
+
+
+
+                                                                12
+                                   (a)                                                     (b)
+                                     Normal distribution with constant parameters
+
+
+
+
+                                   (c)                                                     (d)
+                                 Normal distribution with an input-dependent mean
+
+
+
+
+                                   (e)                                                     (f)
+                                                      Gaussian process
+Figure 5: Linear elasticity: The measurements, the posterior mean responses and the posterior predictions. Left: without input
+error and right: including input error. One can see that if model uncertainty is described by a random variable coming from
+a normal distribution either with constant parameters or an input-dependent mean, more measurements are present inside
+the posterior’s predictions interval than if a Gaussian process is considered. In case model uncertainty is a Gaussian process
+furthermore, one can see that including the input error results in more measurements to be present inside the posterior prediction
+bounds (cf. Figs. 5(e) and 5(f)).
+
+
+
+
+                                                               13
+            (a) Normal distribution with constant parameters        (b) Normal distribution with an input-dependent
+                                                                    mean
+
+
+
+
+                                                         (c) Gaussian process
+
+      Figure 6: Linear elasticity: Marginal posteriors of the Young’s modulus for three kinds of model uncertainty including input
+      error. One can see that if model uncertainty is described by a random variable coming from a normal distribution (either with
+      constant parameters or an input-dependent mean) the marginal posterior becomes wider if the input error is incorporated. In
+      case model uncertainty is represented by a Gaussian process, the marginal posterior gets slightly narrower.
+
+
+
+320   become wider if the input error is incorporated, except for the Gaussian process. That posterior has however
+      changed such that the true value is less in its tail, than if the input error is not incorporated.
+         The posterior predictions for all three model uncertainties if the input error is also considered are shown
+      in Figs. 5(b), 5(d) and 5(f). One can see that for both cases in which model uncertainty is a random
+      variable, the posterior mean responses move closer to the measurement data. In case model uncertainty is
+325   considered as a Gaussian process, including the input error results in a wider envelope that includes more
+      data (cf. Figs. 5(e) and 5(f)). Also the only data point not present in the envelope is still closer to the
+      envelope if the input error is considered. The numerical values for the marginal posteriors mean, MAP point
+      and standard deviation are given in Table 1.
+
+      6.3. Linear elasticity-linear hardening
+330       For linear elasticity, we have shown that considering the error in the strain and model uncertainty leads
+      to wider marginal posteriors of the Young’s modulus (except if model uncertainty is treated as a Gaussian
+      process). This can generally be considered as an improvement, because either the true value was present
+      inside the wider distributions or the MAP point has moved towards the true value. For this case we have
+
+
+                                                                   14
+      Table 1: Linear elasticity: The numerical values of the mean, the MAP point and the standard deviation of the marginal
+      posterior PDFs of the Young’s modulus for all considered cases.
+
+
+                      Model uncertainty               Mean (GPa)          MAP (GPa)      Standard deviation (GPa)
+                                                    Error in the stress only
+                           None                         193.5201        193.5201                  3.0861
+                  Random variable from
+                   a normal distribution            184.7892        185.6223                      10.7162
+                 with constant parameters
+                  Random variable from
+                   a normal distribution            198.3326        209.6297                      33.5192
+              with an input-dependent mean
+             Gaussian process with a stationary
+                                                    173.8981        191.6519                      21.5282
+                    covariance function
+                                             Error in the stress and strain
+                           None                     193.7848        193.6629                      4.3032
+                  Random variable from
+                   a normal distribution            209.7249        208.3623                      15.9041
+                 with constant parameters
+                  Random variable from
+                   a normal distribution            180.6751        187.1383                      42.6510
+              with an input-dependent mean
+             Gaussian process with a stationary
+                                                    179.6355        184.3772                      19.4364
+                    covariance function
+
+
+      generated the data using relations that are not too different from the model response of interest. This has
+335   allowed us to compare the identified distributions with the true values. However, the measurement data
+      may deviate considerably more from the model response. In this subsection, we present examples for linear
+      elasticity-linear hardening. Because the deviation between the curves used to generate the data and the
+      model response is so significant, we will not be able to compare the distributions with true values. Instead,
+      we will only investigate the posterior predictions. We have initially generated 30 measurements using the
+340   following curve:
+                                                            p
+                                          σ(, a, max ) = a 2max − (max − )2 ,                             (35)
+      where a = 50 GPa, 0 ≤  ≤ max and max = 0.0056. Similar as in the previous subsection, output and
+      input noise was generated using sωy = 0.01 GPa and sω∗ = 5 × 10−5 (see Fig. 7 for the measurements).
+      The linear elastic-linear hardening model is used as the material description. This entails that we want to
+      identify Young’s modulus E, initial yield stress σy0 and hardening modulus H. The same prior distribution
+345   as in Eq. (30) is used for the Young’s modulus with E prior = 100 GPa, sE prior = 50 GPa. The prior for the
+      yield stress and the hardening modulus read:
+                                                                          2
+                                               
+                                               exp − (σy0 −σ
+                                                   
+                                                                y0 prior )
+                                                             2
+                                                           2sσ
+                                                                             if σy0 ≥ 0
+                                     π(σy0 ) ∝                 y0 prior                 ,                    (36)
+                                                 0                           otherwise
+                                               
+
+      and
+                                                                  2
+                                                                      
+                                                 exp − (H−H
+                                                           2
+                                                             prior )
+                                                                             if H ≥ 0
+                                                              2s
+                                        π(H) ∝                  H prior                  ,                             (37)
+                                                 0                          otherwise
+
+
+                                                               15
+      where σ y0 prior = 0.25 GPa, sσy0 prior = 0.025 GPa, H prior = 30 GPa and sH prior = 15 GPa. In case model
+      uncertainty is described by a random variable coming from a normal distribution with an input-dependent
+350   mean, the relation of Eq. (31) is used for the mean. Furthermore, the prior distributions of the covariance
+      function’s parameters for the Gaussian process are given in Eqs. (32) and (33) with λprior = 0.03 GPa,
+      sλprior = 0.01 GPa, ψ prior = 0.0028 and sψprior = 9.3333 × 10−4 . The lower limit for length scale parameter
+      ψ is set to 2.5 × 10−5 .
+          The posterior predictions are presented in Fig. 7. Two main issues can be observed. (1) By comparing
+355   Figs. 7(a) and 7(b), it can be noticed that including the error in the strain results in a wider prediction
+      interval. This is especially true for the initial part of the response in which the model response is only
+      governed by elasticity. This is due to the fact that the Young’s modulus is larger than the stiffness during
+                                        HE
+      elastoplastic deformation (i.e. H+E     in Eq.(2)). (2) Considering model uncertainties furthermore results in
+      wide posterior prediction envelopes, which consequently include almost all measurement and verification
+360   points. Only for the case in which model uncertainty is represented by a random variable coming from a
+      normal distribution with constant parameters, two verification points are not present within the bounds. One
+      should note however, that in the cases in which model uncertainty is input-dependent, the model uncertainty
+      is so dominant that the two linear regimes in the model response (the elastic regime and the elastoplastic
+      regime) cannot be recognised anymore.
+365       It is also worth to mention that in case the difference between the constitutive model (here linear elasticity-
+      linear hardening) and the true response used to generate the measurements (here Eq. (35)) is large, the
+      influence of incorporating model uncertainty is larger than that of incorporating the error in the strain.
+      Incorporating the error in the strain, if model uncertainty is to be incorporated, can still have a positive
+      influence however, as we have presented for linear elasticity.
+370       In the examples in which linear elasticity were considered, we were able to compare not just the posterior
+      predictions with the measurement data, but also the marginal posteriors with the true values. In case of
+      linear elasticity-linear hardening, it is not possible to compare the marginal posteriors with the true values,
+      because the material model and the true response do not share any parameters. In the case of linear elasticity-
+      linear hardening therefore, we have introduced and will introduce verification points in order to compare the
+375   posterior predictions in more detail. In Fig. 7, we have shown verification points inside the domain of the
+      measured strains. Now, we will add verification data outside the strain domain and investigate the posterior
+      predictions for the verification points outside the initial strain domain.
+          Instead of 30 measurements, we now consider 20 measurements, polluted by noise coming from the
+      aforementioned noise distributions. All priors and their parameters remain the same, except that the co-
+380   variance function’s parameters for the Gaussian process are set to λprior = 0.026 GPa, sλprior = 0.0087 GPa,
+      ψ prior = 0.0018 and sψprior = 0.0006. The lower limit for length scale parameter ψ is set to 2.5 × 10−5 .
+          The posterior predictions are shown in Fig. 8, together with the measurement and verification data. It
+      can be observed that all verification data are inside the posterior predictions’ bounds if model uncertainty
+      is described by a random variable coming from a normal distribution with constant parameters or by a
+385   Gaussian process. In case model uncertainty is described by a Gaussian process furthermore, the uncertainty
+      is substantially larger than if a random variable coming from a normal distribution with constant parameters
+      is used. This can be due to the fact that the Gaussian process assumes the measurements to be correlated,
+      and hence, the larger the distance from the measured data, less information is available and a larger spread
+      is observed. It can furthermore be observed that the smallest number of verification data is present inside
+390   the posterior prediction’s bounds if model uncertainty is represented by a normal distribution with an input-
+      dependent mean. It must be noted though, that if another relation for the mean would be selected, the
+      posterior predictions would differ.
+
+      7. Conclusions
+
+          In this contribution, we have formulated a Bayesian approach that considers the output error (the error
+395   in the stress), the input error (the error in the strain) and the uncertainty of the model in order to identify
+      parameters in elasticity and elastoplasticity from monotonically increasing uniaxial tensile tests. We have
+
+
+                                                              16
+      treated three types of model uncertainty: (1) a random variable coming from a normal distribution with
+      constant parameters, (2) a random variable coming from a normal distribution with an input-dependent
+      mean and (3) a Gaussian process with a stationary covariance function.
+400       We have applied the identification approach to linear elasticity and linear elasticity-linear hardening. The
+      measurement data were artificially generated, allowing us to compare the parameter distributions with the
+      true values for linear elasticity because the material models and the true responses, used to generate the
+      measurement data, shared parameters. For linear elasticity-linear hardening the difference between the true
+      response, used to generate the measurement data, and the material model response was so significant that
+405   no parameters were shared by the two. Consequently, we have only used posterior predictions to assess the
+      quality of the results.
+          The results for linear elasticity show that incorporating any of the three model uncertainty formulations
+      results in wider marginal posterior distributions of the Young’s modulus. Consequently, the chance that
+      the posterior distributions include the true value increases. Incorporating model uncertainty also results in
+410   wider posterior prediction intervals, which therefore contain more measurements.
+          If, in addition to model uncertainty, the error in the strain is also incorporated, the marginal posterior
+      (distribution) of the Young’s modulus becomes even wider. The exception is the case in which model
+      uncertainty is described by a Gaussian process (with a stationary covariance function). The posterior becomes
+      narrower in this case, but the evaluation of the posterior at the true value is nevertheless larger. In other
+415   words, the true value has a higher chance to be realised from the posterior.
+          Incorporating the error in the strain (input error), as well as model uncertainty, also results in wider
+      posterior prediction intervals, which are therefore more likely to contain the measurement data. If model
+      uncertainty is described by a Gaussian process however, the posterior prediction interval does not become
+      wider, but still contains more measurements than if the input error is not included.
+420       Our results generally show that incorporating both model uncertainty and the input error has a favourable
+      influence on the identified parameters and the posterior predictions, compared to only incorporating model
+      uncertainty or only incorporating the input error. If the difference between the true response (used to
+      generate the measurements) and the response of the material model increases however, the added value of
+      incorporating the input error as well reduces substantially.
+
+425   Acknowledgements
+          The authors would like to acknowledge the financial support from the University of Luxembourg and the
+      European Research Council Starting Independent Research Grant (ERC Stg grant agreement No. 279578)
+      entitled “Towards real time multiscale simulation of cutting in nonlinear materials with applications to
+      surgical simulation and computer guided surgery”.
+
+430   Appendix A. Markov chain Monte Carlo (MCMC)
+         Markov chain Monte Carlo (MCMC) techniques are frequently employed numerical approaches to explore
+      posteriors [45, 47], when they are too complex to be analytically analysed. Below, the Monte Carlo method
+      and the adaptive Metropolis algorithm are discussed as means to explore the posterior PDF.
+
+      Appendix A.1. Monte Carlo principle
+435      Consider that ns samples are drawn from a PDF of interest that we denote by πpost (for the case
+      mentioned above, πpost = π(x, xd |y)). Then, the following integral can be approximated by averaging the
+      values of function f(x) for the drawn ns samples.
+                                                    ns          Z
+                                        bfint = 1
+                                                   X
+                                                       f(xi ) ≈      f(x)πpost (x)dx,                           (A.1)
+                                                ns i=1           Rnp
+                 n
+      where {xi }i s is the finite set of samples drawn from πpost . From here onwards, we use hats on top of letters
+      and symbols to denote their numerical approximations. Using the Monte Carlo principle, posterior’s mean
+
+
+                                                             17
+440   x                 \ and the component of the posterior’s covariance matrix at the j th row and lth
+      bpost , MAP point MAP
+      column can be approximated as follows [45]:
+                                                                          ns
+                                                              bpost = 1
+                                                                         X
+                                                              x              xi ,                                                       (A.2)
+                                                                      ns i=1
+
+                                                       \ = argmax π(xi ),
+                                                       MAP                                                                              (A.3)
+                                                                       xi;i=1,...,ns
+
+      and
+
+                                  ns 
+                              1   X                                                
+            (d
+             covpost )jl =               (xi )j − (x
+                                                   bpost )j                  bpost )l , j = 1, 2, · · · , np , l = 1, 2, · · · , np .
+                                                                   (xi )l − (x                                                          (A.4)
+                             ns−1 i=1
+
+      Appendix A.2. The adaptive Metropolis algorithm
+          The Metropolis-Hastings [45] method is a frequently employed Markov chain Monte Carlo (MCMC)
+445   approach. In case a symmetric proposal is used, the algorithm is commonly referred to as a Metropolis
+      algorithm.
+          The Metropolis algorithm explores the posterior PDF by a random walk in the parameter space x. We
+      consider sample xi and the evaluation of the PDF of interested at this sample πpost (xi ). New sample xp is
+      then proposed by drawing from proposal distribution q(xp |xi ). If the PDF of interest at the proposed sample
+450   (πpost (xp )) is larger than its value at the current sample (πpost (xi )), the proposed sample is always accepted
+      (this is correct if the proposal distribution in the Metropolis-Hastings algorithm is symmetric which is the
+      case in the Metropolis algorithm). If πpost (xp ) < πpost (xi ) however, the proposed sample may be accepted as
+      the new sample. This depends on ratio r in Algorithm 1. If the proposed sample is rejected, the old sample
+      is taken as the new sample. The algorithm is repeated for many samples and post-processing, in which the
+455   evolution of the statistical summaries is investigated, must point out if convergence is achieved.
+          The conventional Metropolis algorithm has the disadvantage that proposal distribution’s parameters
+      q(xp |xi ) must be manually tuned. Consequently, an adaptive variant was introduced by Haario et al. [43] in
+      order to avoid this issue. The parameters of the proposal distribution are updated based on the knowledge
+      about the posterior, harvested from the previous samples. We update the proposal distribution once every
+460   1000 samples.
+          Often, a Gaussian distribution is used as a symmetric proposal distribution. In the adaptive Metropolis
+      algorithm, this reads as:
+
+                                                         q(xp |xi ) = N (xi , γ 2 R),                                                   (A.5)
+      where γ 2 R denotes a covariance matrix of size np × np , with np as the number of unknown parameters and
+      hence, the number of dimensions of the posterior. γ must be selected initially and matrix R is updated
+                                                                              2.38
+465   based on the previous samples. We use the following initial value γ = √   np , proposed by Gelman et al. [48].
+      Matrix R is established by storing all nK previous samples in matrix K of size nK × np . R is then computed
+      as follows:
+                                                                        1    e T K,
+                                                              R=             K   e                                                      (A.6)
+                                                                      nK − 1
+            e = K − Kmean and Kmean reads:
+      where K
+                                                                     
+                                                                kmean
+                                                               kmean 
+                                                       Kmean =  .                         ,                                           (A.7)
+                                                                     
+                                                                .. 
+                                                                         kmean     nK ×np
+
+
+                                                                          18
+      and kmean is a row matrix of length np which is determined as follows:
+
+                                           1 nP           n               n
+                                              K            K               K
+                                                                                    
+                                                          P               P
+                                kmean =          (K)i1        (K)i2 · · ·     (K)inp .                                (A.8)
+                                          nK i=1         i=1              i=1
+
+470         Algorithm 1 shows the Metropolis algorithm with the adaptive proposal (Eq. (A.5)).
+
+      Algorithm 1 The Metropolis algorithm with the adaptive proposal
+                                                     2.38
+       1: select initial sample x0 ∈ Rnp and set γ = √ n          p
+       2: for i = 0, 1, 2, ..., ns − 1 do
+       3:    draw xp ∈ Rnp from the proposal distribution q(xp |xi ) in Eq. (A.5)
+                                                                    
+                                                        π     (xp )
+       4:      calculate the ratio r(xi , xp ) = min 1, πpost
+                                                          post (xi )
+
+       5:    draw u ∈ [0, 1] from uniform distribution
+       6:    if r(xi , xp ) ≥ u then
+       7:        xi+1 = xp
+       8:    else
+       9:        xi+1 = xi
+      10:    end if
+      11:    per 1000 samples
+      12:         update matrix K  e
+      13: end for
+
+
+
+
+      Appendix B. Posterior predictive distribution
+
+          One can predict new measurements, based on the current measurements using the posterior predictive
+      distribution. In the case in which no model uncertainties are considered, the posterior predictive distribution
+      of new measurement y new , π(y new |y, , new ) results from the following integral [5]:
+                                                          Z
+                                       new        new
+                                   π(y |y, ,  ) =             π(y new |x, new )π(x|y, )dx,                  (B.1)
+                                                               Rnp
+                                T
+475   where  = 1 · · · nm          denotes the vector of measured strains, at which stresses y are measured.
+      Furthermore, new denotes the new strain, for which we want to predict new stress y new . The integral in
+      Eq. (B.1) can normally not be computed analytically [5]. In practise however, one can use the MCMC
+      approach to approximate Eq. (B.1). Since we have already sampled the posterior, we can straightforwardly
+      replace the ith sample in π(y new |xi , new ) and then draw sample yinew from π(y new |xi , new ) [45]. Furthermore,
+480   the posterior mean response reads [5]:
+                                                      Z
+                                             y new =     y new π(y new |y, , new )dy new .                           (B.2)
+                                                        R
+
+      The integral given in Eq. (B.2) is in practise, again, approximated numerically using Monte Carlo integration.
+      More information about posterior predictive analyses can be found in [5].
+         In case of model uncertainty, the posterior predictive distribution reads:
+                                                 Z     Z
+                              new        new
+                           π(y |y, ,  ) =                 π(y new |x, xd , new )π(x, xd |y, )dxdxd ,      (B.3)
+                                                      Rnd   Rnp
+      where nd denotes the number of parameters of the model uncertainty formulation. Note that we have
+485   assumed that the measurement noise parameters are known.
+
+
+
+
+                                                                      19
+      References
+
+       [1] L. A. A. Beex, C. W. Verberne, R. H. J. Peerlings, Experimental identification of a lattice model for
+           woven fabrics: Application to electronic textile, Composites Part A: Applied Science and Manufacturing
+           48 (Supplement C) (2013) 82–92.
+490    [2] L. L. Magorou, F. Bos, F. Rouger, Identification of constitutive laws for wood-based panels by means
+           of an inverse method, Composites Science and Technology 62 (4) (2002) 591–596.
+       [3] K. Genovese, L. Lamberti, C. Pappalettere, Improved global-local simulated annealing formulation for
+           solving non-smooth engineering optimization problems, International Journal of Solids and Structures
+           42 (1) (2005) 203–237.
+495    [4] C. Elster, G. Wübbeler, Bayesian regression versus application of least squares-an example, Metrologia
+           53 (1) (2016) S10.
+       [5] J. L. Beck, Bayesian system identification based on probability logic, Structural Control and Health
+           Monitoring 17 (7) (2010) 825–847.
+       [6] D. Higdon, H. Lee, Z. Bi, A Bayesian approach to characterizing uncertainty in inverse problems using
+500        coarse and fine scale information, IEEE Transactions on Signal Processing 50 (2002) 388–399.
+       [7] J. Wang, N. Zabaras, A Bayesian inference approach to the inverse heat conduction problem, Interna-
+           tional Journal of Heat and Mass Transfer 47 (17-18) (2004) 3927–3941.
+
+       [8] P. Risholm, F. Janoos, I. Norton, A. J. Golby, W. M. Wells, Bayesian characterization of uncertainty
+           in intra-subject non-rigid registration, Medical image analysis 17 (5) (2013) 538–555.
+505    [9] S. Lan, T. Bui-Thanh, M. Christie, M. Girolami, Emulation of higher-order tensors in manifold Monte
+           Carlo methods for Bayesian inverse problems, Journal of Computational Physics 308 (2016) 81–101.
+
+      [10] J. Isenberg, Progressing from least squares to Bayesian estimation, in: Proceedings of the 1979 ASME
+           design engineering technical conference, New York, 1979, pp. 1–11.
+      [11] K. F. Alvin, Finite element model update via Bayesian estimation and minimization of dynamic resid-
+510        uals, AIAA journal 35 (5) (1997) 879–886.
+
+      [12] J. L. Beck, L. S. Katafygiotis, Updating models and their uncertainties. I: Bayesian statistical framework,
+           Journal of Engineering Mechanics 124 (4) (1998) 455–461.
+      [13] T. Marwala, S. Sibusiso, Finite element model updating using Bayesian framework and modal properties,
+           Journal of Aircraft 42 (1) (2005) 275–278.
+515   [14] T. C. Lai, K. H. Ip, Parameter estimation of orthotropic plates by Bayesian sensitivity analysis, Com-
+           posite Structures 34 (1) (1996) 29–42.
+      [15] F. Daghia, S. de Miranda, F. Ubertini, E. Viola, Estimation of elastic constants of thick laminated
+           plates within a Bayesian framework, Composite Structures 80 (3) (2007) 461–473.
+      [16] J. M. Nichols, W. A. Link, K. D. Murphy, C. C. Olson, A Bayesian approach to identifying structural
+520        nonlinearity using free-decay response: Application to damage detection in composites, Journal of Sound
+           and Vibration 329 (15) (2010) 2995–3007.
+      [17] C. Gogu, W. Yin, R. Haftka, P. Ifju, J. Molimard, R. Le Riche, A. Vautrin, Bayesian identification of
+           elastic constants in multi-directional laminate from moiré interferometry displacement fields, Experi-
+           mental Mechanics 53 (4) (2013) 635–648.
+
+
+
+                                                            20
+525   [18] P. S. Koutsourelakis, A novel Bayesian strategy for the identification of spatially varying material prop-
+           erties and model validation: An application to static elastography, International Journal for Numerical
+           Methods in Engineering 91 (3) (2012) 249–268.
+      [19] C. Gogu, R. Haftka, R. L. Riche, J. Molimard, A. Vautrin, Introduction to the Bayesian approach
+           applied to elastic constants identification, AIAA journal 48 (5) (2010) 893–903.
+
+530   [20] T. Most, Identification of the parameters of complex constitutive models: Least squares minimization
+           vs. Bayesian updating, in: D. Straub (Ed.), Reliability and optimization of structural systems, CRC
+           press, 2010, pp. 119–130.
+      [21] B. V. Rosić, A. Kčerová, J. Sýkora, O. Pajonk, A. Litvinenko, H. G. Matthies, Parameter identification
+           in a probabilistic setting, Engineering Structures 50 (2013) 179–196, Engineering Structures: Modelling
+535        and Computations (special issue IASS-IACM 2012).
+      [22] M. Muto, J. L. Beck, Bayesian updating and model class selection for hysteretic structural models using
+           stochastic simulation, Journal of Vibration and Control 14 (1-2) (2008) 7–34.
+      [23] P. Liu, S. K. Au, Bayesian parameter identification of hysteretic behavior of composite walls, Proba-
+           bilistic Engineering Mechanics 34 (2013) 101–109.
+540   [24] D. D. Fitzenz, A. Jalobeanu, S. H. Hickman, Integrating laboratory creep compaction data with nu-
+           merical fault models: A Bayesian framework, Journal of Geophysical Research: Solid Earth 112 (B8),
+           B08410.
+
+      [25] W. P. Hernandez, F. C. L. Borges, D. A. Castello, N. Roitman, C. Magluta, Bayesian inference applied
+           on model calibration of fractional derivative viscoelastic model, in: V. Steffen Jr, D. A. Rade, W. M.
+545        Bessa (Eds.), DINAME 2015 - Proceedings of the XVII International symposium on dynamic problems
+           of mechanics, Natal, 2015.
+      [26] H. Rappel, L. A. A. Beex, S. P. A. Bordas, Bayesian inference to identify parameters in viscoelasticity,
+           Mechanics of Time-Dependent Materials.
+           URL https://doi.org/10.1007/s11043-017-9361-0
+550   [27] M. C. Kennedy, A. O’Hagan, Bayesian calibration of computer models, Journal of the Royal Statistical
+           Society: Series B (Statistical Methodology) 63 (3) (2001) 425–464.
+      [28] D. Higdon, J. Gattiker, B. Williams, M. Rightley, Computer model calibration using high-dimensional
+           output, Journal of the American Statistical Association 103 (482) (2008) 570–583.
+      [29] J. McFarland, S. Mahadevan, Multivariate significance testing and model calibration under uncertainty,
+555        Computer Methods in Applied Mechanics and Engineering 197 (29) (2008) 2467–2479.
+      [30] G. B. Arhonditsis, D. Papantou, W. Zhang, G. Perhar, E. Massos, M. Shi, Bayesian calibration of
+           mechanistic aquatic biogeochemical models and benefits for environmental management, Journal of
+           Marine Systems 73 (1) (2008) 8–30.
+      [31] S. Sankararaman, Y. Ling, C. Shantz, S. MahadevaA, Inference of equivalent initial flaw size under
+560        multiple sources of uncertainty, International Journal of Fatigue 33 (2) (2011) 75–89.
+      [32] P. D. Arendt, D. W. Apley, W. Chen, Quantification of model uncertainty: Calibration, model discrep-
+           ancy, and identifiability, Journal of Mechanical Design 134 (10) (2012) 100908.
+      [33] K. V. Yuen, L. S. Katafygiotis, Bayesian modal updating using complete input and incomplete response
+           noisy measurements, Journal of Engineering Mechanics 128 (3) (2002) 340–350.
+
+
+
+
+                                                            21
+565   [34] S. F. Gull, Bayesian data analysis: Straight-line fitting, in: J. Skilling (Ed.), Maximum entropy and
+           Bayesian methods, Vol. 36 of Fundamental Theories of Physics, Springer Science & Business Media,
+           Netherlands, 1989, pp. 511–518.
+      [35] P. Dellaportas, D. A. Stephens, Bayesian analysis of errors-in-variables regression models, Biometrics
+           51 (3) (1995) 1085–1095.
+
+570   [36] R. J. Carroll, K. Roeder, L. Wasserman, Flexible parametric measurement error models, Biometrics
+           55 (1) (1999) 44–54.
+      [37] R. Scheines, H. Hoijtink, A. Boomsma, Bayesian estimation and testing of structural equation models,
+           Psychometrika 64 (1) (1999) 37–52.
+
+      [38] B. C. Kelly, Some aspects of measurement error in linear regression of astronomical data, The Astro-
+575        physical Journal 665 (2) (2007) 1489.
+      [39] D. W. Hogg, J. Bovy, D. Lang, Data analysis recipes: Fitting a model to data, ArXiv e-printsarXiv:
+           1008.4686.
+
+      [40] Y. Ling, J. Mullins, S. Mahadevan, Selection of model discrepancy priors in bayesian calibration, Journal
+           of Computational Physics 276 (Supplement C) (2014) 665–680.
+580   [41] Y. Xiong, W. Chen, K.-L. Tsui, D. W. Apley, A better understanding of model updating strategies
+           in validating engineering models, Computer Methods in Applied Mechanics and Engineering 198 (15)
+           (2009) 1327–1337.
+
+      [42] J. Brynjarsdóttir, A. O’Hagan, Learning about physical parameters: The importance of model discrep-
+           ancy, Inverse Problems 30 (11) (2014) 114007.
+585   [43] H. Haario, E. Saksman, J. Tamminen, Adaptive proposal distribution for random walk Metropolis
+           algorithm, Computational Statistics 14 (3) (1999) 375–396.
+
+      [44] C. E. Rasmussen, C. K. Williams, Gaussian processes for machine learning, Vol. 1, MIT press Cambridge,
+           2006.
+      [45] W. R. Gilks, S. Richardson, D. Spiegelhalter, Markov chain Monte Carlo in practice, CRC press, 1995.
+590   [46] S. Hassani, Mathematical methods: For students of physics and related fields, Springer Science & Busi-
+           ness Media, New York, 2008.
+
+      [47] S. Brooks, A. Gelman, G. Jones, X. L. Meng, Handbook of Markov chain Monte Carlo, CRC press,
+           2011.
+      [48] A. Gelman, G. O. Roberts, W. R. Gilks, Efficient Metropolis jumping rules, in: J. M. Bernardo, J. O.
+595        Berger, A. P. Dawid, A. F. M. Smith (Eds.), Bayesian statistics, Vol. 5 of Oxford Sci. Publ., Oxford
+           University Press, New York, 1996, pp. 599–607.
+
+
+
+
+                                                           22
+                     (a) Error in the stress only                   (b) Error in both the stress and the strain
+
+
+
+
+         (c) Normal distribution with constant parameters (d) Normal distribution with an input-dependent
+                                                          mean
+
+
+
+
+                                                    (e) Gaussian process
+
+Figure 7: Linear elasticity-linear hardening: The measurements, the verification points, the posterior mean responses and
+the posterior predictions. Note that for all cases in which model uncertainty is incorporated, the error in the strain is also
+incorporated. One can see that considering model uncertainty results in more measurements to be present inside the bounds of
+the posterior predictions. For the cases in which model uncertainty is input-dependent the model uncertainty is so dominant
+that the two linear regimes in the model response (the elastic regime and the elastoplastic regime) cannot be recognised anymore.
+
+
+
+
+                                                               23
+                       (a) Error in the stress only                 (b) Error in both the stress and the strain
+
+
+
+
+            (c) Normal distribution with constant parame- (d) Normal distribution                with    an   input-
+            ters                                          dependent mean
+
+
+
+
+                                                     (e) Gaussian process
+
+Figure 8: Linear elasticity-linear hardening: The measurements, the verification points, the posterior mean responses and
+the posterior predictions. Note that for all cases in which model uncertainty is incorporated, the error in the strain is also
+incorporated. One can see that considering model uncertainty results in more measurements to be located inside the bounds
+of the posterior predictions. It can be observed that all verification data are inside the posterior predictions’ bounds if model
+uncertainty is described by a random variable coming from a normal distribution with constant parameters or by a Gaussian
+process. In case model uncertainty is described by a Gaussian process furthermore, the uncertainty is substantially larger
+than if a random variable coming from a normal distribution with constant parameters is used. This can be due to the fact
+that the Gaussian process assumes the measurements to be correlated, and hence, the larger the distance from the measured
+data, less information is available and a larger spread is observed. It can furthermore be observed that the smallest number of
+verification data is present inside the posterior prediction’s bounds if model uncertainty is represented by a normal distribution
+with an input-dependent mean. It must be noted though, that if another relation for the mean would be selected, the posterior
+predictions would differ.
+
+
+
+                                                               24
+

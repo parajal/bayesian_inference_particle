@@ -1,0 +1,101 @@
+====================================================================================================
+BAYESIAN INFERENCE REPORT
+====================================================================================================
+
+METADATA
+----------------------------------------------------------------------------------------------------
+Mode:                    creep_unbounded
+Force:                   2.51327e+01 N
+Particle radius:         1.00000e+00 m
+Number of datasets:      1
+MCMC steps:              10000
+MCMC walkers:            12
+Total MCMC samples:      120000
+Burn-in fraction:        0.5
+Thin factor:             2
+Time derivative order:   2
+Init method:             kmeans
+Post burn-in samples:    60000
+Unload time (t_unload):  2.00000e-01 s
+
+Software
+Python: 3.13.13
+Numpy:  2.4.2
+
+NOISE MODEL & PRIORS
+----------------------------------------------------------------------------------------------------
+Data noise added:        Y = F(x) + omega,  omega ~ N(0, sigma_experiment)
+  sigma_experiment:      1.00000e-06
+
+Covariance model:        Sigma = sigma_noise^2 * I + sigma_bias^2 * K(t) + eps * I
+  K(t_i, t_j)  = exp(-|t_i - t_j| / l_bias)   (exponential / Matern-1/2)
+
+Inferred noise priors:
+  sigma_noise ~ Exp(rate=1.00000e+06)  [prior mean = 1.00000e-06]
+  sigma_bias  ~ Exp(rate=1.00000e+02)  [prior mean = 1.00000e-02]
+  l_bias (fixed):        1.66667e-01
+
+DATASETS
+----------------------------------------------------------------------------------------------------
+Dataset 1:
+  Filename:        creep-300pi/creep-0/delta-100-0.txt
+  Angle (deg):     0.0
+  Fx (N):          942.4777960769379
+  Fy (N):          0.0
+  Data points (t): 251
+  Data points (x): 251
+  Data points (y): 251
+  Initial delta:   1.00000e+02
+
+PRIOR BOUNDS
+----------------------------------------------------------------------------------------------------
+Parameter                 Lower           Upper
+eta_s              1.00000e-01    5.00000e+01
+eta_p              1.00000e-01    5.00000e+01
+lambda             5.00000e-02    5.00000e+01
+
+POSTERIOR SUMMARY
+----------------------------------------------------------------------------------------------------
+Parameter           Mean      Median         Std      CI95_low     CI95_high
+eta_s         5.5020e-01  5.5020e-01  4.3622e-03    5.4171e-01    5.5882e-01
+eta_p         5.6973e-01  5.6965e-01  4.7726e-03    5.6040e-01    5.7905e-01
+lambda        7.5033e-02  7.5014e-02  1.3515e-03    7.2459e-02    7.7748e-02
+sigma_noise   9.8796e-07  6.7594e-07  9.9992e-07    2.3128e-08    3.6789e-06
+sigma_bias    2.8803e-02  2.8752e-02  1.2599e-03    2.6479e-02    3.1419e-02
+
+POSTERIOR COVARIANCE MATRIX
+----------------------------------------------------------------------------------------------------
+1.9029e-05 -1.6593e-05 2.9539e-06 -1.4146e-10 2.3916e-08
+-1.6593e-05 2.2778e-05 -8.8756e-07 1.3857e-10 2.9575e-08
+2.9539e-06 -8.8756e-07 1.8266e-06 -2.9462e-11 2.1435e-08
+-1.4146e-10 1.3857e-10 -2.9462e-11 9.9986e-13 4.8066e-11
+2.3916e-08 2.9575e-08 2.1435e-08 4.8066e-11 1.5875e-06
+
+POSTERIOR CORRELATION MATRIX
+----------------------------------------------------------------------------------------------------
+   1.000   -0.797    0.501   -0.032    0.004
+  -0.797    1.000   -0.138    0.029    0.005
+   0.501   -0.138    1.000   -0.022    0.013
+  -0.032    0.029   -0.022    1.000    0.038
+   0.004    0.005    0.013    0.038    1.000
+
+MCMC DIAGNOSTICS
+----------------------------------------------------------------------------------------------------
+Param             Mean         Std       tau         ESS      Rhat
+eta_s       5.5020e-01  4.3622e-03     44.30      1354.5    1.0027
+eta_p       5.6973e-01  4.7726e-03     46.57      1288.4    1.0054
+lambda      7.5033e-02  1.3515e-03     48.18      1245.2    1.0035
+sigma_noise  9.8796e-07  9.9992e-07     33.49      1791.6    1.0008
+sigma_bias  2.8803e-02  1.2599e-03     42.21      1421.4    1.0031
+
+FORWARD MODEL FIT (TRUE PARAMETERS)
+----------------------------------------------------------------------------------------------------
+Before noise (model vs. clean data):
+  Relative L2 error (X-displacement):  1.681367e-01
+
+After noise (model vs. noisy observations):
+  Relative L2 error (X-displacement):  1.681367e-01
+
+Note: Relative L2 error = ||a - b||_2 / ||a||_2, computed using true parameters passed to plot_data().
+      'Before noise' uses the clean FEM signal; 'After noise' uses the noisy observations.
+

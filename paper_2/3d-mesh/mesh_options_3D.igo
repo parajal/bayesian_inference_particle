@@ -1,0 +1,8 @@
+
+//Mesh.Algorithm = 2; // Automatic (default)
+//Mesh.Algorithm3D = 1; // Delauney (default)
+Mesh.ElementOrder = 2; // Second-order elements
+Mesh.Optimize = 1; // Optimize to improve the quality of tetrahedral elements
+Mesh.OptimizeNetgen = 0; // Optimize using Netgen
+
+// vim: set filetype=gmsh :  //

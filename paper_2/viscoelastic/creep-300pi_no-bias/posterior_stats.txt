@@ -1,0 +1,81 @@
+========================================================================================================================
+BAYESIAN INFERENCE RESULTS - POSTERIOR PARAMETER ESTIMATES
+========================================================================================================================
+
+METADATA
+------------------------------------------------------------------------------------------------------------------------
+Mode:                    creep_unbounded
+Force:                   9.42478e+02 N
+Particle radius:         1.00000e+00 m
+Number of datasets:      1
+MCMC steps:              12
+MCMC walkers:            15000
+Total MCMC samples:      180000
+Burn-in fraction:        0.50
+Thin factor:             1
+Time derivative order:   2
+Init strategy:           prior
+Post burn-in samples:    90000
+Unload time (t_unload):  2.00000e-01 s
+
+NOISE MODEL & PRIORS
+------------------------------------------------------------------------------------------------------------------------
+Data noise added:        Y = F(x) + omega,  omega ~ N(0, sigma_experiment)
+  sigma_experiment:      1.00000e-06
+
+Covariance model:        Sigma = sigma_noise^2 * I + sigma_bias^2 * K(t) + eps * I
+  where K(t_i, t_j) = exp(-|t_i - t_j| / l_bias)  (exponential kernel)
+
+Inferred noise priors:
+  sigma_noise ~ Exp(rate=1.00000e+06)  [prior mean = 1.00000e-06]
+  sigma_bias  ~ Exp(rate=1.00000e+10)  [prior mean = 1.00000e-10]
+  l_bias (fixed):        6.00000e-01
+
+DATASETS
+------------------------------------------------------------------------------------------------------------------------
+Dataset 1:
+  Filename:        creep-300pi/creep-0/delta-100-0.txt
+  Angle (deg):     0.0
+  Fx (N):          9.42478e+02
+  Fy (N):          0.00000e+00
+  Data points:     501
+  Initial delta:   1.00000e+02
+
+PRIOR BOUNDS (physical parameters)
+------------------------------------------------------------------------------------------------------------------------
+Parameter            Lower Bound          Upper Bound         
+------------------------------------------------------------------------------------------------------------------------
+eta1                 1.00000e-01          5.00000e+01         
+eta2                 1.00000e-01          5.00000e+01         
+lambda_              5.00000e-02          5.00000e+01         
+
+POSTERIOR ESTIMATES
+------------------------------------------------------------------------------------------------------------------------
+Parameter       Mean               Std Dev            95% CI Lower       95% CI Upper       ESS          R̂          
+------------------------------------------------------------------------------------------------------------------------
+eta1            5.70585e-01        1.27604e-04        5.70324e-01        5.70831e-01        421          1.0833      
+eta2            5.51852e-01        1.62432e-04        5.51545e-01        5.52174e-01        528          1.0845      
+lambda_         7.73294e-02        2.31087e-05        7.72868e-02        7.73803e-02        331          1.1032      
+sigma_noise     8.45390e-03        5.00744e-05        8.35731e-03        8.54826e-03        808          1.0394      
+sigma_bias      1.03078e-10        9.93065e-11        2.70486e-12        3.55129e-10        58           1.0315      
+
+
+====================================================================================================
+PARAMETER INTERPRETATION
+====================================================================================================
+
+====================================================================================================
+FORWARD MODEL FIT (TRUE PARAMETERS)
+====================================================================================================
+
+Before noise (model vs. clean data):
+------------------------------------------------------------
+  Relative L2 error (X-displacement):  1.681062e-01
+
+After noise (model vs. noisy observations):
+------------------------------------------------------------
+  Relative L2 error (X-displacement):  1.681062e-01
+
+Note: Relative L2 error = ||a - b||_2 / ||a||_2, computed using true parameters passed to plot_data().
+      'Before noise' uses the clean FEM signal; 'After noise' uses the noisy observations.
+

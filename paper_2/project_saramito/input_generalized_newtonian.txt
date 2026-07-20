@@ -1,0 +1,48 @@
+
+! input_generalized_newtonian.txt
+
+&comppar
+  meshfile = 'mesh.out'
+
+  eta = 1.0    ! viscosity for starting Stokes solution
+
+  gnmodel = 2  ! generalized Newtonian model (gd=shearrate):
+      !  0: Constant viscosity
+      !       eta = eta_const
+      !  1: Power-law
+      !       eta = m * (gd)^(n-1)
+      !  2: Carreau
+      !       eta = eta_inf + (eta_0 - eta_inf) / (1 + (lambda*gd)^2)^{(1-n)/2}
+      !  3: Carreau-Yasuda
+      !       eta = eta_inf + (eta_0 - eta_inf) / (1 + (lambda*gd)^a)^{(1-n)/a}
+
+  yieldmodel = 2  ! yield model (gd=shearrate) :
+      !   0: No yield function
+      !   1: Bingham, i.e. constant yield stress
+      !        eta = tau_y / gd
+      !   2: Regularized Bingham (Papanastasiou)
+      !     eta = tau_y ( 1 - exp(-r*gd) ) / gd
+      !
+      ! NOTE: the viscosity of the fluid is given by sum of the viscosity
+      ! function given by gnmodel and the yield model.
+
+  m = 1.0                ! m factor in Power-law
+  n = 0.6                ! power-law exponent
+  eta_0 = 1.0            ! eta_0 in Carreau(-Yasuda)
+  eta_inf = 0.0          ! eta_inf in Carreau(-Yasuda)
+  lambda = 1.0           ! lambda in Carreau(-Yasuda)
+  a = 0.7                ! exponent a in Carreau-Yasuda
+  eta_const = 1.0        ! eta_const, constant viscosity for gnmodel=0
+  tau_y = 10.0           ! tau_y, yield stress parameter for yieldmodel>0
+  r = 100.0              ! r, regularizing parameter for yieldmodel=2
+
+  force = 100.0          ! imposed force on the particle
+
+  nPicard = 20           ! number of Picard iterations before Newton-Raphson
+  itermax = 300          ! maximum number of iterations
+  epsvd = 1.e-14         ! maximum velocity difference for iteration
+  epspd = 1.e-10         ! maximum pressure difference for iteration
+
+  real_storage = 10.5    ! storage real in solver (relative to estimate)
+  integer_storage = 1.4  ! storage real in solver (relative to estimate)
+/

@@ -1,0 +1,19 @@
+# ignore all
+*
+
+# unignore all with extensions
+!*.*
+!mkzip
+
+Makefile
+Mdefs.mk
+*.msh
+*.geo
+*.vtk
+*.o
+*.mod
+tags
+.*.swp
+*.out
+*.fig
+*.pdf

@@ -1,0 +1,2376 @@
+Direct numerical simulation of particle alignment in viscoelastic
+fluids
+Citation for published version (APA):
+Jaensson, N. O., Hulsen, M. A., & Anderson, P. D. (2016). Direct numerical simulation of particle alignment in
+viscoelastic fluids. Journal of Non-Newtonian Fluid Mechanics, 235, 125–142.
+https://doi.org/10.1016/j.jnnfm.2016.07.008
+
+
+
+
+DOI:
+10.1016/j.jnnfm.2016.07.008
+
+
+Document status and date:
+Published: 21/07/2016
+
+
+Document Version:
+Accepted manuscript including changes made at the peer-review stage
+
+
+Please check the document version of this publication:
+• A submitted manuscript is the version of the article upon submission and before peer-review. There can be
+important differences between the submitted version and the official published version of record. People
+interested in the research are advised to contact the author for the final version of the publication, or visit the
+DOI to the publisher's website.
+• The final author version and the galley proof are versions of the publication after peer review.
+• The final published version features the final layout of the paper including the volume, issue and page
+numbers.
+Link to publication
+
+
+
+
+General rights
+Copyright and moral rights for the publications made accessible in the public portal are retained by the authors and/or other copyright owners
+and it is a condition of accessing publications that users recognise and abide by the legal requirements associated with these rights.
+
+       • Users may download and print one copy of any publication from the public portal for the purpose of private study or research.
+       • You may not further distribute the material or use it for any profit-making activity or commercial gain
+       • You may freely distribute the URL identifying the publication in the public portal.
+
+If the publication is distributed under the terms of Article 25fa of the Dutch Copyright Act, indicated by the “Taverne” license above, please
+follow below link for the End User Agreement:
+www.tue.nl/taverne
+
+Take down policy
+If you believe that this document breaches copyright please contact us at:
+openaccess@tue.nl
+providing details and we will investigate your claim.
+
+
+
+
+Download date: 07. Jul. 2026
+                  Direct numerical simulation of particle alignment
+
+                                          in viscoelastic fluids
+
+                          N.O. Jaensson∗1,2 , M.A. Hulsen1 , and P.D. Anderson1
+
+        1
+            Department of Mechanical Engineering, Eindhoven University of Technology,
+                          P.O. Box 513, 5600 MB Eindhoven, The Netherlands
+2
+    Dutch Polymer Institute (DPI), P.O. Box 902, 5600 AX Eindhoven, The Netherlands
+
+
+                                                  July 18, 2016
+
+
+
+                                                     Abstract
+
+               Rigid particles suspended in viscoelastic fluids under shear can align in string-like struc-
+            tures in the flow direction. Although this phenomenon was first reported almost four decades
+            ago by Michele et al. [1], the exact mechanism of particle alignment is not completely un-
+            derstood. Initially, it was believed that normal stress differences are responsible for the
+            alignment of particles, but recent experimental work by van Loon et al. [2] showed particle
+            alignment in a shear-thinning fluid without significant normal stress differences.
+               To unravel the phenomenon of particle alignment, we present for the first time 3D direct
+            numerical simulations of the alignment of two and three rigid, non-Brownian particles in
+            a viscoelastic shear flow, with the shear rate denoted by γ̇. The equations are solved on
+            moving, boundary-fitted meshes, which are locally refined to accurately describe the polymer
+            stresses around and in between the particles. A small minimal gap size between the particles
+            is introduced. The Giesekus model, with a relaxation time λ, is used for the viscoelastic
+            fluid, and the effect of the Weissenberg number Wi = λγ̇, shear thinning parameter α and
+            ratio between the solvent viscosity and zero-shear viscosity β is investigated.
+               The numerical method allows for the detailed investigation of particles interacting in
+            viscoelastic flows. Alignment of two and three particles is observed in the simulations. Mor-
+            phology plots were created for various values of α, β and Wi. Alignment is mainly governed
+    ∗
+        n.o.jaensson@tue.nl
+
+
+                                                          1
+      by the value of the elasticity parameter S, defined as half of the ratio between the first nor-
+      mal stress difference and shear stress of the suspending fluid. Alignment appears to occur
+      above a critical value of S, which decreases with increasing α, thus shear thinning promotes
+      alignment. Furthermore, three particles align at lower S than two particles. Finally, simula-
+      tions were performed in a shear-thinning Carreau fluid, where we never observed alignment
+      of the particles. These results lead us to the conclusion that the presence of normal stress
+      differences is essential for particle alignment to occur, although it is strongly promoted by
+      shear thinning.
+
+
+
+1    Introduction
+
+The dynamics of non-Brownian particles in creeping flow has received a great deal of attention
+
+over the last century, starting with the classical work of Einstein on the rheology of dilute
+
+suspensions of rigid spheres [3, 4]. The majority of the theoretical, experimental, and numerical
+
+research has been on particles suspended in Newtonian fluids, e.g. see the reviews [5] and [6].
+
+Recent work in this area is focused on the departure from Newtonian behavior of the suspension
+
+at high volume fractions, e.g. by including friction between particles [7–9].
+
+    Driven by the increasing use of polymer composites (e.g. a polymer matrix filled with rigid
+
+particles [10]), the investigation of the dynamics of rigid particles in viscoelastic fluids has
+
+recently seen an upsurge. See [11] and references therein for a recent review on this topic.
+
+Particles in viscoelastic fluids under creeping flow conditions have the tendency to migrate
+
+across streamlines [12, 13], which does not occur if the suspending fluid is Newtonian. It is
+
+believed that the migration is driven by gradients in normal stresses, and particles tend to
+
+migrate toward regions where normal stresses are lower, e.g. the outer cylinder in a wide-gap
+
+Couette device [14]. Another clear difference with Newtonian fluids is the tendency of spherical
+
+particles to align in string-like structures in flow direction, as was first reported in [1] for particles
+
+located between two flat plates that oscillate back and forth. Further work on the alignment
+
+of particles in viscoelastic shear flow was done both experimentally [2, 15, 16], analytically [17]
+
+and numerically in 2D [18–21] or in 3D using a mesoscopic approach, where the polymers are
+
+represented by discrete particles [22, 23]. Although several groups have been working on the
+
+simulation of 3D viscoelastic suspensions [24–27], to the best of the authors’ knowledge, particle
+
+alignment has not been observed in 3D direct numerical simulations of rigid, spherical particles
+
+
+                                                    2
+in shear flow.
+
+    An interesting discrepancy exists between the experimental and numerical results: alignment
+
+is not observed in experiments using Boger fluids [2, 28, 29]. However, particle chains are
+
+observed in 2D simulations using Oldroyd-B fluids, which have a constant viscosity [18, 20, 21].
+
+The lack of chaining in Boger fluids, combined with the observation of particle strings in shear-
+
+thinning fluids without significant normal stress differences, led van Loon et al. [2] to the
+
+conclusion that shear-thinning plays an essential role in the formation of particle strings. In this
+
+paper, 3D direct numerical simulations are presented of non-Brownian, rigid, spherical particles
+
+in viscoelastic fluids under shear. The finite element method is used on moving, boundary
+
+fitted meshes, which is an effective approach due to the availability of mesh generators that can
+
+efficiently mesh complicated 3D geometries [30]. We will systematically study the effect of the
+
+rheology of the suspending fluid on the alignment of two and three particles.
+
+
+
+2    Problem statement
+
+We consider non-Brownian, inertialess, mono-disperse particles of radius a in a shear flow, as
+
+depicted in Fig. 1. Due to the movement of the rigid top and bottom walls, a shear flow with an
+
+average shear rate of γ̇ = 2Uw /H is imposed, where Uw denotes the magnitude of the velocity of
+
+the walls. The fluids will be described as either Newtonian, viscoelastic or non-elastic but shear-
+
+thinning (Carreau), and the alignment of the particles will be investigated. It is assumed that
+
+the problem is symmetric in the xy-planes at z = 0 and z = W/2, and rotationally symmetric
+
+around the z-axis. Using these symmetries, it suffices to consider a quarter of the domain when
+
+three particles are simulated, whereas half of the domain is considered when two particles are
+
+simulated. This will explained in more detail in Section 4.
+
+
+
+
+                                                 3
+Fig. 1: The problem consists of rigid spheres in a shear flow. The domain is bounded in y-direction by
+rigid walls and periodicity is assumed in x-direction. For the z-direction, symmetry is assumed in the
+xy-planes at z = 0 and z = W/2 (the origin is located at the centroid of the rectangular box).
+
+
+3    Governing equations
+
+Assuming incompressible, inertialess flow, the balance of momentum and balance of mass are
+
+written as
+
+
+                                            −∇ · σ = 0,                                           (1)
+
+                                              ∇ · u = 0,                                          (2)
+
+
+where σ is the Cauchy stress tensor and u is the fluid velocity. The Cauchy stress can be
+
+decomposed in a pressure part, a Newtonian (solvent) part and a viscoelastic part:
+
+
+                                       σ = −pI + 2ηs D + τ ,                                      (3)
+
+
+where p is the pressure, I is the unit tensor, ηs is the Newtonian solvent viscosity, D = (∇u +
+
+(∇u)T )/2 is the rate of deformation tensor, and τ is the viscoelastic stress tensor. To model the
+
+
+                                                  4
+viscoelastic fluid, the Giesekus constitutive model will be used, which shows qualitatively correct
+
+rheological properties of a polymeric fluid (i.e. shear thinning viscosity, first and second normal
+
+stress differences, bounded extensional viscosity). Using the Giesekus constitutive model, the
+
+evolution of the viscoelastic stress is described by [31]:
+
+                                         ∇          λα 2
+                                      λτ + τ +         τ = 2ηp D,                                    (4)
+                                                    ηp
+
+where λ is the relaxation time, ηp is the polymer viscosity and α is the mobility, which controls
+
+the shear-thinning behavior of the fluid. The zero-shear viscosity of the fluid is given by η0 =
+
+ηs + ηp . Furthermore, the upper convected derivative is defined as
+
+                                ∇        D( )
+                                () =          − (∇u)T · ( ) − ( ) · ∇u,                              (5)
+                                         Dt
+
+where D()/Dt denotes the material derivative. The evolution of the polymer stress, described
+
+by Eq. (4), can be rewritten to the equivalent
+
+
+                                             τ = G(c − I),                                           (6)
+                                     ∇
+                                    λ c + c − I + α(c − I)2 = 0,                                     (7)
+
+
+where c is the conformation tensor and G = ηp /λ is the polymer modulus. When supplemented
+
+with the proper boundary conditions, Eqs. (1), (2), (6) and (7) form a well-posed problem for
+
+the unknowns u, p and c.
+
+   Simulations will also be performed using a shear-thinning, viscous fluid which is modeled
+
+by the Carreau model with the viscosity at infinite shear rate set to zero, for which the Cauchy
+
+stress tensor is written as
+
+                                         σ = −pI + 2η(γ̇e )D,                                        (8)
+
+with
+                                                          η0
+                                    η(γ̇e ) =                            ,                           (9)
+                                                (1 + (λc γ̇e )2 )(1−n)/2
+                                                                             √
+where λc is a characteristic time, n is the power-law index and γ̇e =            2D : D is an “effective
+
+shear rate” (for simple shear: γ̇e = γ̇). Despite the presence of a characteristic time λc , there is
+
+no fluid memory in the Carreau model.
+
+                                                      5
+     It is assumed that inertia of the particles can be neglected. Assuming no external forces and
+
+torques are imposed on the particles, this means that the particles are force- and torque-free:
+
+                                                     Z
+                                                             σ · n dS = 0,                       (10)
+                                                      ∂Pi
+                                  Z
+                                         (x − X i ) × (σ · n) dS = 0,                            (11)
+                                   ∂Pi
+
+
+where n is the outwardly directed unit normal vector on the particle boundary ∂Pi and X i =
+
+[Xi , Yi , 0] denotes the location of the center point of the i-th particle. As will become clear in
+
+Section 3.1, initially an additional force is applied on the particle which is gradually removed
+
+in a short amount of time. In that case the force balance (Eq. (10)) becomes:
+
+                                          Z
+                                                  σ · n dS = F i ,                               (12)
+                                            ∂Pi
+
+
+where F i = [Fx,i , Fy,i , 0] is the external force on the i-th particle. The z-component of the force
+
+and the position are set to zero due to symmetry considerations, as will be explained in Section
+
+4.
+
+     The relationship between the position and velocity is described through a kinematic equa-
+
+tion:
+                                                  dX i
+                                                       = U i,                                    (13)
+                                                   dt
+
+where U i = [Ux,i , Uy,i , 0] is the i-th particle translational velocity, where the z-component is
+
+zero due to symmetry. The orientation of the particles does not need updating due to the
+
+particles being spherical.
+
+
+3.1     Boundary and initial conditions
+
+In this section, the boundary and initial conditions are defined. In the numerical implementation
+
+only part of the box depicted in Fig. 1 is simulated. This approach greatly improves numerical
+
+efficiency, as was shown in [32] for a single rotating sphere.
+
+
+
+
+                                                         6
+3.1.1      Boundary conditions for two particles
+
+For the problem of two particles, it is assumed that the particles move in the xy-plane, i.e. X i =
+
+[Xi , Yi , 0] for i = 1 . . . N . Periodicity is assumed in x-direction and symmetry is assumed in the
+
+xy-planes at z = 0 and z = W/2. In this case, only half of the domain has to be meshed, an
+
+example of which is shown in Fig. 2. Assuming no-slip on the rigid boundaries yields for the
+
+velocity
+
+
+                         u = [Uw , 0, 0]                                   on Γ6 ,                  (14)
+
+                         u = [−Uw , 0, 0]                                  on Γ5 ,                  (15)
+
+                         u = U i + ω i × (x − X i )                        on ∂Pi ,                 (16)
+
+
+where the particle velocity U i and angular velocity ω i are such that the force balance (Eq. (10))
+
+and torque balance (Eq. (11)) for the i-th particle are fulfilled. The plane symmetry in the xy-
+
+planes yields:
+
+
+                           (tx )Γ2 = 0          (ty )Γ2 = 0          (uz )Γ2 = 0
+
+                           (tx )Γ4 = 0          (ty )Γ4 = 0          (uz )Γ4 = 0,                   (17)
+
+
+where tx and ty are the x- and y-component of the traction vector t = σ · m, where m is the
+
+outwardly directed unit normal vector on the boundary. Periodicity in x-direction yields the
+
+boundary conditions
+
+
+             (ux )Γ1 =   (ux )Γ3            (uy )Γ1 =     (uy )Γ3          (uz )Γ1 =   (uz )Γ3
+
+             (tx )Γ1 = −(tx )Γ3              (ty )Γ1 = −(ty )Γ3            (tz )Γ1 = −(tz )Γ3
+
+            (cxx )Γ1 =   (cxx )Γ3           (cxy )Γ1 =    (cxy )Γ3        (cyy )Γ1 =   (cyy )Γ3
+
+            (czz )Γ1 =   (czz )Γ3           (cxz )Γ1 =    (cxz )Γ3        (cyz )Γ1 =   (cyz )Γ3 .   (18)
+
+
+In all simulations presented for two particles in Section 5, the problem is rotationally symmetric
+
+around the z-axis (with a rotation angle of 180◦ ). In principle, this would allow for the simulation
+
+of only a quarter of the domain. For practical reasons, we chose not to do that here.
+
+
+
+                                                      7
+                                                Γ1 = ABCD
+                                                Γ2 = BEFC
+                                                Γ3 = EGHF
+                                                Γ4 = GHDA
+                                                Γ5 = ABEG
+                                                Γ6 = CFHD
+
+
+
+
+Fig. 2: Two views of a mesh used for two particles. Plane Γ1 can be identified with Γ3 . These planes
+will be connected node-by-node using a collocation method, and are therefore meshed periodically. Note,
+that this mesh is for illustrative purposes and the meshes used in Section 5 are much more refined.
+
+
+
+
+                                              Γ1 = ABCDE
+                                              Γ2 = DFGHE
+                                              Γ3 = BIJKGFC
+                                              Γ4 = ILMJ
+                                              Γ5 = NKJM
+                                              Γ6 = ALMNHE
+                                              Γ7 = GKNH
+                                              Γ8 = ABIL
+
+
+
+
+Fig. 3: Two views of a mesh used for three particles. Plane Γ1 can be identified with Γ2 , and Γ4 can be
+identified with Γ5 . These planes will be connected node-by-node using a collocation method, and the mesh
+is therefore generated such that Γ1 and Γ2 are symmetric in the line ED, and Γ4 and Γ5 are symmetric
+in the line JM. Note, that this mesh is for illustrative purposes and the meshes used in Section 5 are
+much more refined.
+
+
+3.1.2   Boundary conditions for three particles
+
+For the problem of three particles, it is assumed that the particles move in the xy-plane,
+
+i.e. X i = [Xi , Yi , 0] for i = 1 . . . N . Periodicity is assumed in x-direction and symmetry is
+
+assumed in the xy-planes at z = 0 and z = W/2. Furthermore, the problem is assumed to
+
+be rotationally symmetric around the z-axis (with a rotation angle of 180◦ ): for the particle
+
+at [Xi , Yi , 0] with Xi > 0, there is an opposite particle at −[Xi , Yi , 0]. The middle particle is
+
+located at the origin and is only free to rotate. Using these symmetries, only a quarter of the
+
+domain has to be meshed, an example of which is shown in Fig. 3. Assuming no-slip on the
+
+
+                                                    8
+rigid boundaries yields for the velocity
+
+
+                       u = [Uw , 0, 0]                                   on Γ7 ,                 (19)
+
+                       u = [−Uw , 0, 0]                                  on Γ8 ,                 (20)
+
+                       u = U i + ω i × (x − X i )                        on ∂Pi .                (21)
+
+
+Since the middle particle is only free to rotate, U i = 0 in Eq. (21) for the middle particle. The
+
+plane symmetry in the xy-planes yields:
+
+
+                         (tx )Γ3 = 0          (ty )Γ3 = 0          (uz )Γ3 = 0
+
+                         (tx )Γ6 = 0          (ty )Γ6 = 0          (uz )Γ6 = 0,                  (22)
+
+
+The rotational symmetry around the z-axis implies that the plane Γ1 can be identified with plane
+
+Γ2 , after a rotation around the z-axis. Likewise, plane Γ4 can be identified with plane Γ5 after a
+
+rotation around the z-axis. By performing subsequent rotations around the z-axis, the periodic
+
+domain can be reconstructed. When performing this rotation on a local coordinate system,
+
+it is obvious that the x- and y-components of a vector described in that coordinate system
+
+reverse sign, whereas the z-component does not. When applying this to tensors, only the xz-
+
+and yz-components reverse sign. This yields the following boundary conditions connecting the
+
+planes Γ1 and Γ2 :
+
+
+           (ux )Γ1 = −(ux )Γ2             (uy )Γ1 = −(uy )Γ2             (uz )Γ1 =   (uz )Γ2
+
+           (tx )Γ1 =   (tx )Γ2             (ty )Γ1 =    (ty )Γ2          (tz )Γ1 = −(tz )Γ2
+
+          (cxx )Γ1 =   (cxx )Γ2           (cxy )Γ1 =    (cxy )Γ2        (cyy )Γ1 =   (cyy )Γ2
+
+          (czz )Γ1 =   (czz )Γ2           (cxz )Γ1 = −(cxz )Γ2          (cyz )Γ1 = −(cyz )Γ2 ,   (23)
+
+
+and similarly for Γ4 and Γ5 . Note, that on the lines DE and JM the only possible solution for
+
+ux , uy , cxz and cyz is zero, which is thus prescribed as an essential boundary condition on these
+
+lines.
+
+
+
+
+                                                    9
+3.1.3    Initial conditions
+
+Initial conditions are needed for the particle position and conformation tensor, which are denoted
+
+by
+
+
+                                        X i (t = 0) = X i,0                                   (24)
+
+                                          c(t = 0) = c0 .                                     (25)
+
+
+Since we are interested in the interaction between particles in a flow where viscoelastic stresses
+
+have been “fully developed”, imposing a stress-free state for the conformation tensor would not
+
+suffice. Instead, the initial conformation field is obtained by solving the full set of equations
+
+with the stress-free state as initial condition, but for torque-free particles with fixed location
+
+(i.e. U i = 0 in Eq. (16)). This problem is run for one relaxation time, which allows for the
+
+build-up of viscoelastic stresses. The resulting conformation tensor field c0 is used as an initial
+
+condition in the actual simulations. However, since c0 is determined with the particles being
+
+torque-free, but not necessarily force-free, a force will act on the particles, which would yield
+
+a sudden movement of the particles as they become freely-floating. This problem is tackled by
+
+determining the force on the rotating particles and imposing this force in the initial stage of
+
+the simulation, through F i in Eq. (12). The force is then gradually released in one strain unit
+
+to let the particles become truly freely-floating.
+
+
+
+4     Numerical method
+
+4.1     Weak form
+
+The boundary conditions on the particles given by Eq. (16) are implemented as constraints, with
+
+the particle angular and translational velocities as additional unknowns [33]. This approach
+
+introduces unknowns on the boundaries of the particles: the Lagrange multiplier λi . The weak
+
+form of the momentum/mass balance (for the i-th particle that rotates and translates and is
+
+
+
+
+                                                10
+subject to an external force F i ) is written as: find u, p, U i , ω i and λi such that
+
+
+           (D v , 2ηs D + τ ) − (∇ · v, p) + hv − (V i + χi × (x − X i ), λi i∂Pi = V · F i   (26)
+                                                                                
+                                                                      q, ∇ · u = 0            (27)
+
+                                          hµi , ui − (U i + ω i × (x − X i ))i∂Pi = 0,        (28)
+
+
+for all admissable test functions v, q, χi , V i and µi . Furthermore, D v = ∇v + (∇v)T /2,
+                                                                                       
+
+the notation (·, ·) denotes a proper inner product on the fluid domain and h·, ·i∂Pi is an inner
+
+product on ∂Pi .
+
+   The momentum and mass balance are solved first within a time step, with the polymer stress
+
+τ determined by using a semi-implicit scheme as proposed in [34]. Using the log-conformation
+
+approach [35] and SUPG stabilization [36], the weak form of the evolution equation for confor-
+
+mation tensor (Eq. (7)) reads: find s such that
+
+                                                                
+                                                Ds         T
+                                                               
+                          d + τ (u − um ) · ∇d,    − g (∇u) , s = 0,                          (29)
+                                                Dt
+
+for all admissible test functions d and where s = log c, the parameter τ is due to the SUPG
+
+stabilization and um denotes the mesh velocity, which will be introduced in Section 4.2. The
+
+reader is referred to [35] for details about the log-conformation approach and the expression for
+
+the function g.
+
+
+4.2   Discretization
+
+To solve the velocity-pressure-conformation system as was presented in Section 3, the finite
+
+element method is used with tetrahedral P2 P1 P1 elements for the velocity-pressure-conformation
+
+fields. Boundary fitted meshes are used, that move in time such that the mesh on the particle
+
+boundary follows the motion of the particle, whereas the remaining boundaries are stationary.
+
+Since the fluid is now described on a grid that moves with the material, but not in a Lagrangian
+
+manner, the arbitrary Lagrange Euler (ALE) formulation [37] is used. The moving grid is
+
+identified with the mesh, and the material derivative is rewritten to
+
+                                  D( )   ∂( )
+                                       =       + (u − um ) · ( ),                             (30)
+                                  Dt     ∂t xm
+
+
+                                                 11
+where the first term on the right hand side is the partial derivative at constant mesh coordinate
+
+xm , i.e. the mesh derivative, and um is the mesh velocity. A smooth displacement field for the
+
+entire mesh is found by solving a Laplace problem, similar to [37]. Once the mesh deformation
+
+becomes too large, remeshing is performed based on the position of the particles. Variables
+
+needed in the time integration, i.e. the conformation field at previous time steps, are projected
+
+onto the new mesh [37]. To obtain the new mesh at the previous instances in time, which is
+
+needed to find the mesh velocity, the mesh coordinates are projected as well [38]. Since the
+
+elements are aligned to the particle boundary, the inner product h·, ·i∂Pi can be performed using
+
+a collocation method [33]. Meshes are generated using Gmsh [30].
+
+   Second-order time integration schemes are used for all time derivatives, and the momen-
+
+tum/mass balance and evolution equation for the conformation tensor are solved in two separate
+
+systems. To stabilize the evolution equation for the conformation tensor, SUPG [36] is applied
+
+and the log-conformation representation is used [35, 39]. Stabilization in the momentum bal-
+
+ance is obtained by using an implicit-stress formulation, where a prediction of the conformation
+
+tensor is used in the momentum balance [34]. This approach allows for the simulations of fluids
+
+with a small or absent solvent contribution, and additional stabilization using DEVSS [40] is
+
+found not to be necessary.
+
+   At several stages within a time step, a system of equations has to be solved with a constant
+
+matrix but varying right-hand-side (e.g. the components of the conformation tensor). For these
+
+systems, a direct solver from the HSL library [41] is employed, which allows for the re-use of
+
+the LU-decomposition. The momentum balance is solved using a GMRES iterative solver with
+
+an ILUT preconditioner from the Sparskit library [42]. The mesh is moved in time, but the
+
+connectivity of the nodes remains unchanged. Therefore, the structure of the system matrix
+
+for the momentum balance is constant until a remeshing is performed, which allows for the
+
+re-use of the ILUT preconditioner. In most cases, the preconditioner could be used for a large
+
+number of timesteps, and only had to be rebuilt after a remeshing, significantly decreasing the
+
+computational time. To reduce fill-in when building the preconditioner, the nodes of the mesh
+
+are renumbered using MeTiS [43].
+
+
+
+
+                                               12
+4.3   Minimal gap size between particles
+
+As the particles come in close proximity, the fluid film in the gap between the particles becomes
+
+more difficult to describe. However, accurately resolving the stresses in this fluid film is essential
+
+to capture the complete interaction between particles. The approach taken here, is to locally
+
+refine the mesh in between the particles in an adaptive manner, ensuring there are always a
+
+minimum number of elements (nmin ) between the particle boundaries. For the velocity, which
+
+is interpolated using quadratic elements, this yields a minimum number of 2nmin + 1 nodes
+
+between particle boundaries. An example of such a locally refined mesh is shown in Fig. 4.
+
+
+
+
+Fig. 4: Adaptive refinement ensures that there are always nmin elements in between the particles (here
+nmin = 4).
+
+
+   In the 2D simulations presented in [18, 21], it was shown that a fluid film of finite thickness
+
+remains in the gap between the particles. Accurately describing this fluid film using local
+
+mesh refinement was thus enough to keep the particles from coming into close proximity. In
+
+3D, however, the simulations showed that the fluid films become much thinner for interacting
+
+spheres, yielding very large deformation rates in the gaps between the particles. As a result,
+
+large polymer stresses are generated, leading to a breakdown of the numerical scheme. As
+
+suggested in [37], a repulsive force, which can be interpreted as a consequence of the particle
+
+roughness, can help in keeping the particles apart. One option is to a-priori define a force as
+
+a function of the distance between the particles [33]. Another option is to determine this force
+
+iteratively in an optimization problem [44]. Our approach is different, and avoids an iterative
+
+procedure to find the repulsive force: the repulsive force is implicitly solved for, as an additional
+
+unknown in the system of equations. This is done by defining a minimal gap size between the
+
+particles, which will be denoted by dmin . Once particles “step” into this region, their motion
+
+
+                                                 13
+is constrained such that the distance between the particles does not decrease further. We will
+
+explain this approach for two particles, but an arbitrary number of particles that are within a
+
+distance dmin could be constrained in this manner.
+
+
+                                                           Fr
+
+                                             dmin           2
+
+                                                     w12
+                                        Fr
+                                                1
+
+
+Fig. 5: Two particles are constrained such that the distance between the particle does not decrease. The
+angular velocity of the rotating rigid rod between the particle centers is denoted by w12 . The force Fr
+does not have to be specified a-priori, but follows from the constrained particle movement.
+
+
+   As the gap size between the particle boundaries becomes smaller than dmin , which is typi-
+
+cally chosen much smaller than the particle radius, the translational motion of the particles is
+
+constrained such that the distance between the particles does not decrease (one can imagine
+
+this as the particle centers being connected by rotating rigid rods). The translational velocity
+
+of one of the particles is removed as an unknown, but the angular velocity of the rigid rod
+
+connecting the particles, denoted by w12 in Fig. 5, is included as an unknown. Instead of using
+
+Eq. (16) for each particle, the velocity on the particle boundaries is now given by
+
+
+               u = U 1 + ω 1 × (x − X 1 )                                       on ∂P1             (31)
+
+               u = U 1 + w12 × (X 2 − X 1 ) + ω 2 × (x − X 2 )                  on ∂P2 ,           (32)
+
+
+where it can be seen that the velocity on ∂P2 depends on U 1 , which should be properly accounted
+
+for in the weak form given by Eqs. (26) and (28). The translational velocity of the second particle
+
+is given by U 2 = U 1 + w12 × (X 2 − X 1 ). Note, that the component of w12 × (X 2 − X 1 ) in
+
+the direction X 2 − X 1 disappears, effectively reducing the number of unknowns by one. We
+
+want to emphasize that the magnitude of the force between the particles, denoted by Fr , follows
+
+from the constrained movement of the particles and can be evaluated by summing the Lagrange
+
+multipliers on the particle boundary, and thus does not have to be specified a-priori. The
+
+repulsive force is directed along the vector connecting the particles, and from the sign of Fr it
+
+can be deduced if the particles want to move toward or away from each other. In the latter
+
+                                                    14
+case the constraint can be released and the normal weak form as given by Eqs. (26) to (28) is
+
+solved in the next time step. The influence of the size of dmin on the particle alignment will be
+
+investigated in Section 5.2.
+
+    The procedure can be extended to an arbitrary number of particles by including the transla-
+
+tion velocity of one of the particles (denoted by U 1 , but the choice is arbitrary) and the angular
+
+velocities of the rotating rigid rods between the particles in the constraint. The translational
+
+velocities of all particles included in the constraint (those particles that are “connected” by a
+
+fluid layer of less than dmin ) now depend on U 1 and the angular velocities of the rigid rods in
+
+between them, which should be properly accounted for when building the constraint equation.
+
+For a full 3D problem where the particles can move out-of-plane, many particles can be within
+
+dmin , and geometrical constraints can yield dependencies between the rotations of the rigid
+
+rods, this is not a trivial task. For the simulation of three particles, the translational velocity
+
+of the middle particle is zero, thus U 1 = 0 in Eqs. (31) and (32). Furthermore, Eq. (32) is
+
+implemented by rewriting w12 × (X 2 − X 1 ) = U2 ν, where ν is the unit vector perpendicular
+
+to X 2 − X 1 , in the xy-plane.
+
+
+
+5    Results
+
+Simulations have been performed to investigate the string formation of two and three particles
+
+(with the symmetry assumptions as outlined in Section 4). In dimensionless form, the viscoelas-
+
+tic problem is described by the Weissenberg number, defined by Wi = λγ̇, the mobility α which
+
+controls the shear-thinning behavior of the fluid, and the ratio between the solvent viscosity and
+
+the zero-shear viscosity, denoted by β = ηs /η0 . Many of the results will be presented in terms
+
+of the angle between the line connecting the center points of the particles and the x-axis, which
+
+is denoted by θ and is defined in Fig. 6. For the two-particle problem, the particles are initially
+
+placed at an angle of θ = 10◦ with an initial distance between the center points of 3a, yielding
+
+an initial distance a between the particle boundaries. Note, that in the very beginning of the
+
+simulations, a force is applied to the particles which is gradually removed in one strain unit, as
+
+explained in Section 3.1.3. The distance between the particle boundaries after one strain unit
+
+depends on the fluid parameters, but is around a/2. For the three-particle problem, the middle
+
+particle is initially placed at the origin, and will remain there during the entire simulation. The
+
+
+                                                15
+outer particles are placed at an angle of θ = 10◦ , with an initial distance between the center
+
+points of the middle and outer particles of 3a. The size of the periodic domain as defined in
+
+Fig. 1 is set to L = 80a, H = 40a and W = 20a, to ensure minimal wall and periodicity effects.
+
+
+
+
+                                                                         y
+                          y                                      θ              x
+                 θ              x                                                   θ
+
+                                    θ
+
+
+
+
+                          (a)                                             (b)
+
+Fig. 6: The angle θ is defined as the angle between the x-axis and the line connecting the center points
+of the particles for the two-particle problem (a) and the three-particle problem (b).
+
+
+
+
+5.1    Mesh and time convergence
+
+We commence by investigating the mesh and time convergence, which will be done for the
+
+three-particle problem. Convergence was more difficult to obtain for high values of Wi and low
+
+values of α, β and dmin . We study convergence for Wi = 3, α = 0.01, β = 0.1 and dmin = 0.02 in
+
+this section. Note, that dmin is normalized with the particle diameter 2a throughout this paper.
+
+The meshes are characterized by the number of elements on the equator of the particle (npart )
+
+and the number of elements in between the particles (nmin ) as defined in Section 4.3. The base
+
+element size on and near the particles is thus hpart = 2πa/npart , but smaller elements are used
+
+in between the particles to ensure nmin is satisfied. Far away from the particles, larger elements
+
+are used as shown in Fig. 3. Four different meshes, called M1 to M4, are used in the mesh
+
+convergence study, with the mesh parameters and total number of elements (ntotal ) summarized
+
+in Table 1.
+
+   Simulations are performed using a time step ∆t = 0.08, of which the results are shown in
+
+Fig. 7a, where the angle θ is plotted as a function of strain, and in Fig. 7b, where the angular
+
+velocity of the outer particles ωz is plotted as a function of strain. Note, that the peaks in
+
+angular velocity are due to remeshing, specifically the projection of the old solutions needed
+
+for time integration onto the new mesh, and the peaks become smaller on finer meshes. It
+
+
+                                                  16
+Table 1: The meshes used in the convergence study. The total number of elements and nodes are approx-
+imations, since the meshes change during the simulation.
+
+
+                         npart   nmin   number of elements      number of nodes
+                   M1     32      1          ∼ 5000                 ∼ 8000
+                   M2     64      2         ∼ 20000                ∼ 31000
+                   M3     96      3         ∼ 58000                ∼ 88000
+                   M4    128      4         ∼ 188000               ∼ 272000
+
+
+
+can be observed that the angle θ initially increases, an indication that the particles are moving
+
+past each other. For mesh M1, θ indeed keeps growing and the particles pass each other.
+
+However, for mesh M2, M3 and M4, the angle decreases after going through a maximum and
+
+reaches a steady value around tγ̇ = 40. At this point, the particles have formed a stable
+
+string, as will be further investigated in the next sections. Since the occurrence of particle
+
+alignment is the main subject of this paper, mesh M1 is clearly too coarse (although alignment
+
+was observed on meshes similar to M1, but this was very mesh dependent). Furthermore, the
+
+angular velocity will be investigated in more detail in this paper, which appears to be accurate
+
+on mesh M3. Simulations will thus be performed on mesh M3, which offers a good trade-off
+
+between accuracy and efficiency. For the two-particle problem, the same meshing parameters
+
+are used (i.e. npart = 96 and nmin = 3).
+
+   Time convergence is investigated using mesh M3 for three time steps: ∆t = 0.08, 0.04 and
+
+0.02, the results of which are presented in Fig. 7c and Fig. 7d. The time step ∆t is normalized
+
+by the inverse of the strain rate γ̇ −1 . The plots completely overlap for the three values of
+
+∆t, indicating that accurate results can be obtained with ∆t = 0.08, which will be the time
+
+step used in all subsequent simulations for both the two-particle problem and the three-particle
+
+problem.
+
+
+5.2   Influence of the minimal gap size
+
+As was explained in Section 4.3, a minimal distance between the particle boundaries is intro-
+
+duced, which is denoted by dmin . Here, the influence of this parameter on the alignment of the
+
+particles is investigated for the three-particle problem. In Fig. 8, results are presented of the
+
+angle θ as a function of strain for α = 0.01, β = 0.1 and varying values of Wi. Several sets of
+
+results are shown for dmin = 0.08, 0.04, 0.02 and 0.01. For dmin = 0.08, particle alignment takes
+
+
+                                                 17
+           30                                                    0.3
+                     M1                                                                           M1
+                     M2                                                                           M2
+           25        M3                                         0.25                              M3
+                     M4                                                                           M4
+           20                                                    0.2
+
+
+
+
+                                                       ωz /γ̇
+  θ [◦ ]
+
+
+
+
+           15                                                   0.15
+
+           10                                                    0.1
+
+           5                                                    0.05
+
+           0                                                      0
+                0   10     20          30   40   50                    0   10     20         30      40   50
+                                 tγ̇                                                   tγ̇
+
+
+                          (a)                                                   (b)
+           30                                                    0.3
+                     ∆t = 0.08                                                           ∆t = 0.08
+                     ∆t = 0.04                                                           ∆t = 0.04
+           25        ∆t = 0.02                                  0.25                     ∆t = 0.02
+
+           20                                                    0.2
+                                                       ωz /γ̇
+  θ [◦ ]
+
+
+
+
+           15                                                   0.15
+
+           10                                                    0.1
+
+           5                                                    0.05
+
+           0                                                      0
+                0   10     20          30   40   50                    0   10     20         30      40   50
+                                 tγ̇                                                   tγ̇
+
+
+                          (c)                                                   (d)
+
+Fig. 7: Mesh convergence of the angle θ (a) and the angular velocity ωz of the outer particles (b) and
+time convergence of the angle θ (c) and the angular velocity ωz of the outer particles (d). Here Wi = 3,
+α = 0.01, β = 0.1, dmin = 0.02 and three particles are simulated.
+
+
+place for Wi ≥ 2. For dmin = 0.04, particle alignment is observed for Wi ≥ 2.5, which is similar
+
+to dmin = 0.02. For dmin = 0.01, particle alignment takes place for Wi ≥ 3. These results indi-
+
+cate that the exact value of Wi for alignment to take place depends on dmin , with the transition
+
+to alignment being pushed to higher values of Wi when decreasing dmin . This raises the question
+
+whether alignment will still occur for dmin = 0. However, setting dmin = 0 results in very large
+
+deformation rates in the gaps between the particles. As a result, large polymer stresses are
+
+generated, leading to a breakdown of the numerical scheme. For particles with a diameter of
+
+2.7 µm (similar to the polystyrene spheres used in [29]), setting dmin = 0.01 corresponds to a
+
+
+
+                                                  18
+           30                                                         30
+                                           Newtonian
+                                           Wi = 1
+           25                              Wi = 1.5                   25
+                                           Wi = 2
+                                           Wi = 2.5
+           20                              Wi = 3                     20
+                                           Wi = 3.5
+  θ [◦ ]
+
+
+
+
+                                                             θ [◦ ]
+           15                              Wi = 4                     15
+
+           10                                                         10
+
+           5                                                          5
+
+           0                                                          0
+                0   10     20         30     40        50                  0   10     20         30   40   50
+                                tγ̇                                                        tγ̇
+
+
+                     (a) dmin = 0.08                                            (b) dmin = 0.04
+           30                                                         30
+
+           25                                                         25
+
+           20                                                         20
+  θ [◦ ]
+
+
+
+
+                                                             θ [◦ ]
+
+
+
+
+           15                                                         15
+
+           10                                                         10
+
+           5                                                          5
+
+           0                                                          0
+                0   10     20         30     40        50                  0   10     20         30   40   50
+                                tγ̇                                                        tγ̇
+
+
+                     (c) dmin = 0.02                                            (d) dmin = 0.01
+
+Fig. 8: The angle θ as a function of strain for α = 0.01 and β = 0.1 and varying Wi for the three-
+particle problem. The minimal distance is set to dmin = 0.08 (a), dmin = 0.04 (b), dmin = 0.02 (a), and
+dmin = 0.01 (d).
+
+
+particle roughness of about 27 nm. We will use dmin = 0.02 in all subsequent simulations, and
+
+the detailed analysis of the influence of a minimal distance between the particles will be subject
+
+of future research.
+
+    Having verified the accuracy of our numerical technique and the influence of the parameter
+
+dmin , we will now continue with the analysis of particle alignment, paying specific attention to
+
+the rheology of the suspending fluid.
+
+
+
+
+                                                        19
+5.3     Alignment in viscoelastic fluids
+
+In this section, we will investigate the alignment of two and three particles in a suspending fluid
+
+with α = 0.1, β = 0.1 in more detail. With these fluid parameters, the alignment occurs at
+
+similar Wi for two and three particles, which allows for comparison between the simulations of
+
+two particles and three particles. In all subsequent simulations a minimal distance of dmin = 0.02
+
+is used.
+
+
+5.3.1      Two particles
+
+Simulations of two particles in a suspending fluid with α = 0.1 and β = 0.1 are presented in
+
+Fig. 9a, where the angle θ is shown at a function of strain. Alignment clearly takes place at
+
+Wi ≥ 1.5, with a final value for θ that decreases with increasing Wi. Note, that alignment of
+
+two isolated particles was not observed in the experiments by Snijkers et al. [45], but was later
+
+observed in experiments at higher shear rate by van Loon et al. [2].
+
+   The magnitude of the repulsive force Fr (needed to maintain the minimal gap size) and
+
+particle rotation ωz are shown in Fig. 9b and 9c, respectively. The angular velocities of the two
+
+particles are equal (with very slight deviations due to the asymmetry of the mesh), thus only
+
+one angular velocity is shown. Furthermore, the force Fr is scaled with FS = 6πa2 γ̇η0 , which
+
+is the Stokes’ drag of a particle moving through a viscous fluid of viscosity η0 at a velocity aγ̇.
+
+A positive value for Fr means that the force is repulsive. Furthermore, the angular velocity
+
+is scaled with γ̇, which yields a value of 0.5 for an isolated spherical particle in a Newtonian
+
+fluid [46]. As the particles align, the repulsive force goes to a constant value, which decreases
+
+with increasing Wi, which might be attributed to the lower viscosity at higher Wi in the shear-
+
+thinning Giesekus fluid. However, comparing Fr for different Wi is difficult, since the angle θ is
+
+not the same for all Wi. For higher values of θ the particles is located in a region with higher
+
+absolute values of the velocity due to the imposed shear, thus a larger repulsive force is needed
+
+to keep the particles apart.
+
+   Also the angular velocity shows a decrease with increasing Wi, similarly to what was observed
+
+in simulations and experiment on an isolated sphere [47, 48]. As was mentioned by Hwang and
+
+Hulsen [20], the angular velocity plays a large role in string formation, and a reduction of about
+
+60% with respect to the angular velocity of a particle suspended in a Newtonian fluid was
+
+
+
+                                                20
+observed. Michele et al. [1] observed an almost vanishing angular velocity of particles in strings.
+
+Van Loon et al. [2] mention that the existence of a fluid film in between the particles is essential
+
+due to the particles being able to rotate and thus satisfy the zero-torque condition individually,
+
+instead of tumbling with the complete chain.
+
+           30                                                                     0.5
+                                      Newtonian
+                                      Wi = 1
+           25                         Wi = 1.5                                    0.4
+                                      Wi = 2
+                                      Wi = 2.5
+           20                         Wi = 3
+                                      Wi = 3.5                                    0.3
+
+
+
+
+                                                                         Fr /FS
+  θ [◦ ]
+
+
+
+
+           15                         Wi = 4
+                                                                                  0.2
+           10
+
+                                                                                  0.1
+           5
+
+           0                                                                       0
+                0   10       20            30        40        50                       0        10        20         30   40   50
+                                  tγ̇                                                                           tγ̇
+
+
+                         (a) angle θ                                              (b) magnitude of the repulsive force
+                                           0.5
+
+
+                                           0.4
+
+
+                                           0.3
+                                  ωz /γ̇
+
+
+
+
+                                           0.2
+
+
+                                           0.1
+
+
+                                            0
+                                                 0        10        20            30        40        50
+                                                                           tγ̇
+
+
+                                                     (c) angular velocity
+
+Fig. 9: The angle θ (a), repulsive force Fr (b) and angular velocity ωz (c) as a function of strain. Two
+particles are simulated in a suspending fluid with α = 0.1, β = 0.1 and varying Wi.
+
+
+    In Fig. 10 the trace of the polymer stress tensor is shown in the case of two aligning particles
+
+(Wi = 3, α = 0.1 and β = 0.1). At tγ̇ = 0, polymer stresses are observed which are due to the
+
+c0 used, as explained in Section 3.1. At tγ̇ = 8, the particles have moved close to each other and
+
+the polymer stress field has changed significantly. Regions of high polymer stress are observed
+
+in the gap between the particles, where there exist high local shear rates due to the rotation
+
+
+                                                                21
+of the particles. Furthermore, an asymmetric distribution of stresses around the particles can
+
+be observed, with regions of high stress above the right particle and below the left particle. At
+
+tγ̇ = 16, a steady situation has been reached, and hardly any difference is observed with the
+
+conformation field and orientation of the particles at tγ̇ = 48. The particles align with a slight
+
+angle with respect to the x-axis.
+
+                                               tr(τ p )/G
+
+                                       0                      40
+                                                max: 50
+
+
+
+
+                          tγ̇ = 0                                      tγ̇ = 4
+
+
+
+
+                          tγ̇ = 8                                      tγ̇ = 12
+
+
+
+
+                          tγ̇ = 16                                     tγ̇ = 48
+
+Fig. 10: Snapshots of the polymer stress during alignment of two particles (Wi = 3, α = 0.1 and β = 0.1).
+A close-up of the polymer stress at tγ̇ = 48 is shown in Fig. 13a.
+
+
+
+
+5.3.2   Three particles
+
+Simulations of three particles in a suspending fluid with α = 0.1 and β = 0.1 are presented in
+
+Fig. 11a, where the angle θ is shown as a function of strain. Similar to two particles, alignment
+
+takes place at Wi ≥ 1.5, but the final values of θ are smaller than for the two-particle simulations.
+
+This is an indication that the alignment of three particles occurs more readily (at lower Wi)
+
+
+                                                   22
+than the alignment of two particles, which will be shown to be indeed the case in Section 5.4.
+
+   The magnitude of the repulsive force is shown in Fig. 11b, which is about a factor two
+
+smaller than for the case of two particles. However, a direct comparison is again difficult due
+
+to the different values of θ. The angular velocity of the middle and outer particles are shown in
+
+Fig. 11c and 11d, respectively. For all Wi, an initial decrease of the angular velocity is observed
+
+as the particles move toward each other. For particles that do not align (Wi ≤ 1), the angular
+
+velocity goes through a minimum and increases again as the particles move around each other.
+
+For particles that do align (Wi ≥ 1.5), the particle angular velocity decreases and reaches a
+
+steady value around tγ̇ = 10. The final value of the angular velocity depends on Wi: higher
+
+values of Wi lead to lower values of the angular velocity. The trends are equal for the inner
+
+and outer particles, but the middle particle rotates significantly slower. This can be explained
+
+by the middle particle experiencing resistance from the two outer particles, whereas the outer
+
+particles only experience resistance from the single middle particle. Interestingly, the angular
+
+velocity in the two-particle problem is similar to the angular velocity of the outer particles in
+
+the three-particle problems. Due to the slower rotation of the middle particle (and the gap
+
+between the particles being equal) the deformation rates in between the particles are lower for
+
+three particles than for two particles. Therefore, the normal stresses in the gap between the
+
+particles are lower, which might explain why three particles align more readily.
+
+   In Fig. 12 the trace of the polymer stress tensor is shown in the case of three aligning
+
+particles (Wi = 3, α = 0.1 and β = 0.1). Initially, larger polymer stresses are observed when
+
+compared to the two aligning particles shown in Fig. 10. Furthermore, regions of large polymer
+
+stresses are observed around the middle particle, which appear to contribute to the stresses
+
+around the outer particles. This contribution of the middle particle to the stresses around the
+
+outer particles offers another explanation as to why three particles align at lower Wi for the
+
+same α and β (as will be shown in Section 5.4). Close to steady state, the string retains an
+
+angle with respect to the x-axis, as can be seen at tγ̇ = 48. Finally, we present a comparison of
+
+the polymer stress in the gap between the particles for the two- and three-particle problems in
+
+Fig. 13. Indeed, the stresses in the gap are lower for the three-particle problem, which can be
+
+attributed to the angular velocity of the middle particle being lower, as was shown in Fig. 11.
+
+
+
+
+                                                23
+            30                                                                0.5
+                                          Newtonian
+                                          Wi = 1
+            25                            Wi = 1.5                            0.4
+                                          Wi = 2
+                                          Wi = 2.5
+            20                            Wi = 3
+                                          Wi = 3.5                            0.3
+
+
+
+
+                                                                     Fr /FS
+  θ [◦ ]
+
+
+
+
+            15                            Wi = 4
+                                                                              0.2
+            10
+
+                                                                              0.1
+            5
+
+            0                                                                  0
+                 0       10       20           30     40    50                      0   10      20         30    40    50
+                                        tγ̇                                                          tγ̇
+
+
+                              (a) angle θ                                     (b) magnitude of the repulsive force
+            0.5                                                               0.5
+
+
+            0.4                                                               0.4
+
+
+            0.3                                                               0.3
+   ωz /γ̇
+
+
+
+
+                                                                     ωz /γ̇
+
+
+
+
+            0.2                                                               0.2
+
+
+            0.1                                                               0.1
+
+
+                 0                                                             0
+                     0   10        20          30     40    50                      0   10      20         30    40    50
+                                         tγ̇                                                         tγ̇
+
+
+             (c) angular velocity middle particle                              (d) angular velocity outer particles
+
+Fig. 11: The angle θ (a), repulsive force Fr (b) and angular velocities ωz of the middle (c) and outer
+(d) particles as a function of strain. Three particles are simulated in a suspending fluid with α = 0.1,
+β = 0.1 and varying Wi.
+
+
+5.4         Morphology diagrams
+
+Next, the influence of the rheology of the suspending fluid is investigated. As was shown by
+
+Hwang and Hulsen [20], it is more appropriate to analyze alignment in terms of the elasticity
+
+parameter S of the suspending fluid, which is defined by
+
+                                                                1 N1
+                                                           S=         ,                                               (33)
+                                                                2 σxy
+
+
+
+
+                                                                24
+                                            tr(τ p )/G
+
+                                     0                    40
+                                             max: 42
+
+
+
+
+                         tγ̇ = 0                                   tγ̇ = 4
+
+
+
+
+                         tγ̇ = 8                                  tγ̇ = 12
+
+
+
+
+                        tγ̇ = 16                                  tγ̇ = 48
+
+Fig. 12: Snapshots of the polymer stress during alignment of three particles (Wi = 3, α = 0.1 and
+β = 0.1). A close-up of the polymer stress at tγ̇ = 48 is shown in Fig. 13b.
+
+
+where N1 is the steady first normal stress difference and σxy is the shear stress of the pure
+
+fluid in simple shear. The relationship between S and Wi is shown in Fig. 14 for several values
+
+of α and β. The curve goes through a maximum which depends on both α and β: above a
+
+certain value of Wi, increasing Wi further leads to a decrease of the elasticity parameter. To
+
+investigate the influence of the Weissenberg number, shear thinning and solvent viscosity, many
+
+simulations were performed for varying Wi, α and β for both the two-particle and the three-
+
+particle problem. By evaluating curves such as the angle θ versus tγ̇, it can be deduced if the
+
+particles are aligning in a string or passing each other. If the angle θ is constant or decreasing
+
+at tγ̇ = 50, we will assume that the particles have aligned in a stable string.
+
+   In this manner, morphology plots can be created as is shown in Fig. 15 for two particles
+
+and in Fig. 16 for three particles. For constant α and β, three particles align at lower Wi
+
+
+                                               25
+                                                tr(τ p )/G
+
+                                        0                      50
+
+
+
+
+                          (a) two particles                   (b) three particles
+
+Fig. 13: Close-up of the polymer stress in the gap between the particles at tγ̇ = 48 for two particles (a)
+and three particles (b) (Wi = 3, α = 0.1 and β = 0.1).
+
+
+than two particles. Possible explanations given in Section 5.3 were that the middle particle
+
+rotates more slowly in the three particles problem (yielding lower normal stresses in the fluid
+
+film between the particles), or the middle particle contributing to the stresses around the outer
+
+particles. The morphology plots indicate that S indeed plays a large role in particle alignment.
+
+Alignment appears to occur above a certain critical value of S, which varies with α: for lower
+
+values of alpha, a higher S is needed for alignment. As can be seen in Fig. 14, the value of
+
+S goes through a maximum for increasing Wi. From this, one would expect that when Wi is
+
+increased, alignment would stop occurring at some point. The simulations of two particles at
+
+α = 0.2 and β = 0.2 presented in Fig. 15c and three particles at α = 0.2 and β = 0.3 presented
+
+in Fig. 16c show this is indeed the case. For the two-particle problem, no alignment is observed
+
+for β ≥ 0.3, whereas for the three particle problem, no alignment is observed for β ≥ 0.4.
+
+   These results are in agreement with the literature, where shear-thinning was observed to play
+
+a crucial role in alignment [2]. Extrapolating the results to large values of β, typical for Boger
+
+fluids (e.g. a two-mode Giesekus fit to the rheological data of a Boger fluid yielded β = 0.56
+
+in [49]), yields large values of Wi needed for alignment, which might explain why alignment
+
+is not observed in Boger fluids. Moreover, the results indicate that the critical value for S for
+
+alignment to occur increases for decreasing α. This critical value of S might not be reached
+
+
+
+                                                   26
+        102                                                    102
+                    β = 0.1                                               β = 0.1
+                    β = 0.2                                               β = 0.2
+                    β = 0.3                                               β = 0.3
+        101         β = 0.4                                    101        β = 0.4
+                    β = 0.5                                               β = 0.5
+                    β = 0.6                                               β = 0.6
+
+    S   100                                                S   100
+
+
+        10-1                                                   10-1
+
+
+        10-2                                                   10-2
+           10-1        100               101     102              10-1      100                101   102
+                              Wi = λγ̇                                              Wi = λγ̇
+
+
+                   (a) α = 0.01                                           (b) α = 0.1
+                                         2
+                                    10
+                                               β = 0.1
+                                               β = 0.2
+                                               β = 0.3
+                                    101        β = 0.4
+                                               β = 0.5
+                                               β = 0.6
+
+                                S   100
+
+
+                                    10-1
+
+
+                                    10-2
+                                       10-1      100                101     102
+                                                         Wi = λγ̇
+
+
+                                               (c) α = 0.2
+
+Fig. 14: The elasticity parameter S as a function of Wi for the pure fluid for α = 0.01 (a), α = 0.1 (b)
+and α = 0.2 (c) (simple shear).
+
+
+in experiments or might not even be reachable at all (i.e. for values of α that are not zero, S
+
+has a maximum as shown in Fig. 14). A similar observation was done by Hwang and Hulsen,
+
+although their problem was 2D, with biperiodic boundary conditions [20].
+
+   The simulations we have presented up until now are in agreement with the literature: align-
+
+ment occurs in fluids that are both elastic and shear thinning. Although alignment was observed
+
+for a weakly shear-thinning fluid (α = 0.01), an interesting case is α = 0, thus a constant vis-
+
+cosity, elastic Oldroyd-B fluid. Simulations of three particles were performed for α = 0 and
+
+β = 0.1, but mesh-convergence and stability were much more difficult to obtain. Preliminary
+
+results (not shown here) indicate that for Wi ≥ 6, the particles align. A value of Wi = 6
+
+
+                                                   27
+      8       align                                                               8         align
+              pass                                                                          pass
+      7                                                                           7
+      6                                                                           6
+      5                                                                         5
+   Wi 4       3                                                              Wi 4
+          S=
+             2.5
+      3   S=                                                                      3
+              2                                                                             1.5
+          S=                                                                          =
+      2                                                                           2 S
+                                                                                        S=1
+      1                                                                           1
+                                                                                       S = 0.5
+      0                                                                           0
+          0    0.1    0.2   0.3       0.4       0.5          0.6     0.7               0     0.1      0.2     0.3       0.4   0.5   0.6   0.7
+                                  β                                                                                 β
+
+
+                      (a) α = 0.01                                                                        (b) α = 0.1
+
+                                       8             align
+                                                     pass
+                                       7
+                                       6
+                                     5
+                                  Wi 4
+
+                                       3            1.5
+                                                =
+                                            S
+                                       2
+                                                     1
+                                            S=
+                                       1 S = 0.5
+                                       0
+                                         0    0.1              0.2     0.3       0.4       0.5      0.6     0.7
+                                                                             β
+
+
+                                                                   (c) α = 0.2
+
+Fig. 15: Morphology plots describing the alignment or passing of two particles for α = 0.01 (a), α = 0.1
+(b) and α = 0.2 (c) for varying combinations of Wi and β. Isolines for constant values of the elasticity
+parameter S are plotted as well.
+
+
+corresponds to S = 5.4 (for an Oldroyd-B fluid S = (1 − β)Wi). These results indicate that
+
+shear-thinning is not needed for particle alignment, although it was shown to have a strong
+
+alignment-promoting effect. This is in contrast with the experimental results presented in [2].
+
+In the next section, we will study particles suspended in non-elastic shear-thinning fluids.
+
+
+5.5    Non-elastic shear-thinning fluids
+
+For generalized Newtonian fluids, alignment is not to be expected. This follows from a simple
+
+argument given by Phillips [50]: the momentum balance Eq. (1), together with the Cauchy
+
+
+
+                                                                       28
+      8       align                                                               8         align
+              pass                                                                          pass
+      7                                                                           7
+      6                                                                           6
+      5                                                                         5
+   Wi 4       3                                                              Wi 4
+          S=
+             2.5
+      3   S=                                                                      3
+              2                                                                             1.5
+          S=                                                                          =
+      2                                                                           2 S
+                                                                                        S=1
+      1                                                                           1
+                                                                                       S = 0.5
+      0                                                                           0
+          0    0.1    0.2   0.3       0.4       0.5          0.6     0.7               0     0.1      0.2     0.3       0.4   0.5   0.6   0.7
+                                  β                                                                                 β
+
+
+                      (a) α = 0.01                                                                        (b) α = 0.1
+
+                                       8             align
+                                                     pass
+                                       7
+                                       6
+                                     5
+                                  Wi 4
+
+                                       3            1.5
+                                                =
+                                            S
+                                       2
+                                                     1
+                                            S=
+                                       1 S = 0.5
+                                       0
+                                         0    0.1              0.2     0.3       0.4       0.5      0.6     0.7
+                                                                             β
+
+
+                                                                   (c) α = 0.2
+
+Fig. 16: Morphology plots describing the alignment or passing of three particles for α = 0.01 (a), α = 0.1
+(b) and α = 0.2 (c) for varying combinations of Wi and β. Isolines for constant values of the elasticity
+parameter S are plotted as well.
+
+
+stress given by Eq. (8), is non-linear but reversible in time (i.e. upon flow reversal, the velocities,
+
+pressures and viscous stresses change signs). If the flow is reversed, the particles would thus
+
+trace back their paths, and any structure that was formed during flow would be lost. This leads
+
+to a paradox: for a generalized Newtonian fluid, reversing the flow does not alter the physical
+
+picture since the viscosity is an instantaneous function of the strain rate and does not depend
+
+on the direction of the velocity. The only conclusion is thus that alignment cannot take place
+
+in generalized Newtonian fluids. We should emphasize that in the simulations presented in this
+
+paper, irreversibility is introduced by enforcing a minimal distance between the particles (see
+
+
+
+                                                                       29
+Section 4.3), which yields a repulsive force that does not change sign upon flow reversal. To
+
+investigate the effect of the shear-thinning on the interaction between the particles, we will now
+
+move on to non-elastic shear-thinning fluids, described by the Carreau model (Eq. (9)). The
+
+dimensionless groups describing the problem are λc γ̇ and the power-law index n. In Fig. 17 the
+
+shear viscosity of the pure fluid is shown for a strongly thinning fluid (n = 0.1), weakly thinning
+
+fluid (n = 0.7) and two intermediate cases (n = 0.3 and n = 0.57). The fluid with n = 0.57
+
+is chosen such that the power-law index is equal to the power-law index of the shear-thinning
+
+fluid used by van Loon et al. [2], where particle strings were observed. The initial force on the
+
+particles, which is released in one strain unit (see Section 3.1), is not necessary in this case.
+
+                               101
+
+
+                               100
+
+
+                         η(γ̇)
+                               10-1
+                          η0
+
+
+                               10-2          n = 0.7
+                                             n = 0.57
+                                             n = 0.3
+                                             n = 0.1
+                               10-3
+                                  10-1      100         101     102       103
+                                                        λc γ̇
+
+  Fig. 17: Shear rate dependent viscosity of the Carreau fluid for varying values of n (simple shear).
+
+
+
+
+5.5.1   Three particles
+
+Simulations are performed at λc γ̇ = 1, 10 and 100 for the three-particle problem. The results
+
+of the angle θ as a function of strain are shown in Fig. 18. In none of the simulations in purely
+
+shear-thinning fluids, the particles reach a steady location with respect to each other, i.e. no
+
+alignment is observed. For λc γ̇ = 10 and λc γ̇ = 100, the results are similar: which is most likely
+
+due to the imposed shear rate already being in the shear-thinning part of the viscosity curve as
+
+shown in Fig. 17. For λc γ̇ = 1, the results are different, with the particles passing each other
+
+more rapidly. In this case, the imposed shear rate is close to the Newtonian plateau, whereas
+
+the shear rate in between the particles is further down the shear-thinning part of the curve.
+
+For all values of λc γ̇, the particle trajectories are affected by the amount of shear-thinning in
+
+                                                  30
+the suspending fluid: when decreasing the power-law index n, it takes longer for the particles
+
+to move around each other.
+
+   To conclude, we present the angular velocity and magnitude of the repulsive force (scaled by
+
+FS = 6πa2 γ̇η0 , see Section 5.3) in Fig. 19. For both the middle particle and the outer particles,
+
+the angular velocity is larger for smaller values of n in the initial part of the simulation. Around
+
+tγ̇ = 3, the particle movement is constrained and a discontinuity in the angular velocities for
+
+the Carreau fluids can be observed. This can be explained by a sudden decrease in effective
+
+shear-rate (and thus an increase in viscosity) as the particles stop moving toward each other.
+
+The Newtonian curve shows a kink, but it is continuous. In the second part of the simulation,
+
+where the particle movement is constrained, the angular velocity is smaller for smaller values
+
+of n, which is opposite to the initial part of the simulation. The trends of the angular velocity
+
+are similar for the middle particle and the outer particles, but the angular velocity for the
+
+middle particle is slightly lower, due to the middle particle experiencing resistance from the two
+
+outer particles. The repulsive force is shown in Fig. 19c, where a decrease of Fr is observed
+
+with increased shear-thinning. We attribute this effect to an effective decrease of the viscosity
+
+around and between the particles, yielding lower viscous stresses and thus a smaller repulsive
+
+force.
+
+
+5.5.2    Two particles
+
+We have performed simulations for two particles in the same non-elastic shear-thinning Carreau
+
+fluids as used in the previous section. No alignment was observed, and the results are comparable
+
+to the three-particle problem and will thus not be reproduced here.
+
+
+
+
+                                                31
+           30                                                                     30
+
+           25                                                                     25
+
+           20                                                                     20
+  θ [◦ ]
+
+
+
+
+                                                                         θ [◦ ]
+           15                                                                     15
+
+           10                                                                     10
+                                       Newtonian                                                                 Newtonian
+                                       n = 0.7                                                                   n = 0.7
+           5                           n = 0.57                                   5                              n = 0.57
+                                       n = 0.3                                                                   n = 0.3
+                                       n = 0.1                                                                   n = 0.1
+           0                                                                      0
+                0   1         2             3       4            5                     0       1           2         3       4   5
+                                   tγ̇                                                                         tγ̇
+
+
+                        (a) λc γ̇ = 1                                                              (b) λc γ̇ = 10
+                                           30
+
+                                           25
+
+                                           20
+                                  θ [◦ ]
+
+
+
+
+                                           15
+
+                                           10
+                                                                              Newtonian
+                                                                              n = 0.7
+                                           5                                  n = 0.57
+                                                                              n = 0.3
+                                                                              n = 0.1
+                                           0
+                                                0       1            2             3       4           5
+                                                                          tγ̇
+
+
+                                                            (c) λc γ̇ = 100
+
+Fig. 18: The angle θ as a function of strain in a Carreau fluid for λc γ̇ = 1 (a), λc γ̇ = 10 (b) and
+λc γ̇ = 100 (c).
+
+
+
+
+                                                                  32
+            0.5                                                                   0.5
+
+
+            0.4                                                                   0.4
+
+
+            0.3                                                                   0.3
+   ωz /γ̇
+
+
+
+
+                                                                         ωz /γ̇
+            0.2                                                                   0.2
+                                       Newtonian                                                             Newtonian
+                                       n = 0.7                                                               n = 0.7
+            0.1                        n = 0.57                                   0.1                        n = 0.57
+                                       n = 0.3                                                               n = 0.3
+                                       n = 0.1                                                               n = 0.1
+             0                                                                     0
+                  0    1       2             3        4          5                      0       1       2         3      4   5
+                                     tγ̇                                                                    tγ̇
+
+
+             (a) angular velocity middle particle                                  (b) angular velocity outer particles
+                                             2
+                                                              Newtonian
+                                                              n = 0.7
+                                                              n = 0.57
+                                            1.5               n = 0.3
+                                                              n = 0.1
+                                   Fr /FS
+
+
+
+
+                                             1
+
+
+                                            0.5
+
+
+                                             0
+                                                  0       1          2             3        4       5
+                                                                           tγ̇
+
+
+                                            (c) magnitude of the repulsive force
+
+Fig. 19: The angular velocity of the middle particle (a), outer particle (b) and magnitude of the repulsive
+force as a function of strain (c) in a Carreau fluid for λc γ̇ = 10.
+
+
+
+
+                                                                  33
+6    Discussion and conclusion
+
+We have presented the first 3D direct numerical simulations of particle alignment in viscoelastic
+
+fluids. The influence of the rheology of the suspending fluid, specifically its shear-thinning
+
+behavior, the Weissenberg number and the solvent viscosity ratio, was investigated for the
+
+alignment of two and three particles. Accurately describing the polymer stress in the fluid was
+
+found to be essential for the formation of particle strings, and mesh-dependent results were
+
+obtained on coarse meshes. Due to the use of adaptive meshing, the resolution around the
+
+particles can be locally increased to obtain mesh-independent results.
+
+    A fluid film in between the particles is essential such that they can satisfy the zero-torque
+
+condition individually, instead of tumbling as a whole [2]. As opposed to the 2D simulations
+
+presented in [18, 20], the particles come into close proximity to each other in the 3D case,
+
+yielding very large deformation rates in the gaps between the particles. As a result, large
+
+polymer stresses are generated, leading to a breakdown of the numerical scheme. This problem
+
+was solved by introducing a small minimal gap size. This minimal gap size is implemented as
+
+a constraint, thus the repulsive force follows from the Lagrange multipliers and does not have
+
+to be specified a-priori. Alignment was observed for a minimal gap size of 1% of the particle
+
+diameter. However, increasing the minimal gap size appears to promote alignment. This raises
+
+the question whether alignment will still occur if the minimal gap size goes to zero since no
+
+evidence was found that a fluid film of constant thickness develops between the particles. This is
+
+consistent with experiments presented by van Loon et al. [2], where the use of a depletion force
+
+(effectively lowering dmin ) was shown to hinder particle alignment. In the simulations, however,
+
+this film might be much thinner than in the 2D case, due to the interaction between spheres
+
+occurring over smaller surfaces. A possible explanation for the existence of a repulsive force
+
+is particle roughness [37]. For particles with a diameter of 2.7 µm (similar to the polystyrene
+
+spheres used in [29]), a value for dmin of 1% of the particle diameter corresponds to roughness
+
+of about 27 nm.
+
+    The alignment of particles appears to be strongly dependent on the ratio between the first
+
+normal stress difference and the shear stress of the suspending fluid, expressed in the “elasticity
+
+parameter” S. For fluids where S = 0, i.e. non-elastic shear-thinning fluids, no alignment is
+
+observed. For viscoelastic fluids, alignment occurs above a certain value of S, which is lower for
+
+
+                                                34
+a more shear thinning fluid, whereas the presence of a solvent viscosity makes it more difficult
+
+for particles to align. The use of S to describe alignment is supported by simulations that
+
+indicate that alignment stops occurring above a certain value of Wi, which can be explained by
+
+S going through a maximum for increasing Wi (for α > 0). Extrapolating the results to large
+
+values of the solvent viscosity, typical for Boger fluids, might explain why particles do not align
+
+in Boger fluids: the value of S for alignment to occur is very high and might not be reached
+
+in experiments or might not even be reachable at all (i.e. for values of α that are not zero, S
+
+has a maximum as shown in Fig. 14). This does, however, not explain why alignment occurs
+
+in shear-thinning fluids without significant normal stress differences [2]. A possible explanation
+
+might be that the (small) normal stress differences present in this fluid are responsible for the
+
+alignment. Also, the presence of other particles might promote alignment, as was observed in
+
+the 2D simulations presented in [21].
+
+   Supported by the lack of alignment in non-elastic shear-thinning fluids and the results of
+
+particle alignment in weakly shear-thinning fluids, we conclude that normal stress differences are
+
+essential for particle alignment to occur, whereas shear-thinning can have a strong alignment-
+
+promoting effect. However, an elaborate comparison of experimental and numerical results,
+
+especially with respect to the existence of a fluid film in between the particles, is necessary to
+
+validate the numerical model presented in this paper. This will be topic of future research.
+
+
+
+Acknowledgment
+
+This research forms part of the research programme of the Dutch Polymer Institute (DPI),
+
+project #746.
+
+
+
+
+                                                35
+References
+
+ [1] J. Michele, R. Pätzold, and R. Donis. Alignment and aggregation effects in suspensions of
+
+    spheres in non-Newtonian media. Rheologica Acta, 16:317–321, 1977.
+
+ [2] S. Van Loon, J. Fransaer, C. Clasen, and J. Vermant. String formation in sheared sus-
+
+    pensions in rheologically complex media: The essential role of shear thinning. Journal of
+
+    Rheology, 58(1):237–254, 2014.
+
+ [3] A. Einstein. Eine neue Bestimmung der Moleküldimensionen. Annalen der Physik, 19:289–
+
+    306, 1906.
+
+ [4] A. Einstein. Berichtigung zu meiner Arbeit: Eine neue Bestimming der Moleküldimensio-
+
+    nen. Annalen der Physik, 34:591–592, 1911.
+
+ [5] M.M. Denn and J.F. Morris. Rheology of non-Brownian suspensions. Annual Review of
+
+    Chemical and Biomolecular Engineering, 5:203–28, 2014.
+
+ [6] J. Mewis and N.J. Wagner. Current trends in suspension rheology. Journal of Non-
+
+    Newtonian Fluid Mechanics, 157:147–150, 2009.
+
+ [7] A. Sierou and J.F. Brady. Rheology and microstructure in concentrated noncolloidal sus-
+
+    pensions. Journal of Rheology, 46(5):1031–1056, 2002.
+
+ [8] F. Boyer, E. Guazzelli, and O. Pouliquen. Unifying suspension and granular rheology.
+
+    Physical Review Letters, 107:188301, 2011.
+
+ [9] R. Mari, R. Seto, J.F. Morris, and M.M. Denn. Shear thickening, frictionless and frictional
+
+    rheologies in non-Brownian suspensions. Journal of Rheology, 58(6):1693–1724, 2014.
+
+[10] S.Y. Fu, X.Q. Feng, B. Lauke, and Y.W. Mai. Effects of particle size, particle/matrix
+
+    interface adhesion and particle loading on mechanical properties of particulate-polymer
+
+    composites. Composites Part B: Engineering, 39:933–961, 2008.
+
+[11] G. D’Avino and P.L. Maffettone. Particle dynamics in viscoelastic liquids. Journal of
+
+    Non-Newtonian Fluid Mechanics, 215:80–104, 2015.
+
+
+
+
+                                              36
+[12] M.A. Tehrani. An experimental study of particle migration in pipe flow of viscoelastic
+
+    fluids. Journal of Rheology, 40(6):1057–1077, 1996.
+
+[13] G. D’Avino, T. Tuccillo, P.L. Maffettone, F. Greco, and M.A. Hulsen. Numerical simula-
+
+    tions of particle migration in a viscoelastic fluid subjected to shear flow. Computers and
+
+    Fluids, 39:709–721, 2010.
+
+[14] G. D’Avino, F. Snijkers, R. Pasquino, M. A. Hulsen, F. Greco, P. L. Maffettone, and J. Ver-
+
+    mant. Migration of a sphere suspended in viscoelastic liquids in Couette flow: experiments
+
+    and simulations. Rheologica Acta, 51(3):215–234, 2012.
+
+[15] M.K. Lyon, D.W. Mead, R.E. Elliott, and L.G. Leal. Structure formation in moderately
+
+    concentrated viscoelastic suspensions in simple shear flow. Journal of Rheology, 45(4):881–
+
+    890, 2001.
+
+[16] R. Pasquino, D. Panariello, and N. Grizzuti. Migration and alignment of spherical particles
+
+    in sheared viscoelastic suspensions. A quantitative determination of the flow-induced self-
+
+    assembly kinetics. Journal of Colloid and Interface Science, 394:49–54, 2013.
+
+[17] D.D. Joseph and J.J. Feng. A note on the forces that move particles in a second-order
+
+    fluid. Journal of Non-Newtonian Fluid Mechanics, 64:299–302, 1996.
+
+[18] Y.J. Choi and M.A. Hulsen. Alignment of particles in a confined shear flow of a viscoelastic
+
+    fluid. Journal of Non-Newtonian Fluid Mechanics, 175-176:89–103, 2012.
+
+[19] R. Pasquino, G. D’Avino, P.L. Maffettone, F. Greco, and N. Grizzuti. Migration and
+
+    chaining of noncolloidal spheres suspended in a sheared viscoelastic medium. Experiments
+
+    and numerical simulations. Journal of Non-Newtonian Fluid Mechanics, 203:1–8, 2014.
+
+[20] W.R. Hwang and M.A. Hulsen. Structure formation of non-colloidal particles in viscoelastic
+
+    fluids subjected to simple shear flow. Macromolecular Materials and Engineering, 296:321–
+
+    330, 2011.
+
+[21] N.O. Jaensson, M.A. Hulsen, and P.D. Anderson. Simulations of the start-up of shear flow
+
+    of 2D particle suspensions in viscoelastic fluids: structure formation and rheology. Journal
+
+    of Non-Newtonian Fluid Mechanics, 225:70–85, 2015.
+
+
+                                               37
+[22] I.S. Santos de Oliveira, A. van den Noort, J.T. Padding, W.K. den Otter, and W.J.
+
+    Briels. Alignment of particles in sheared viscoelastic fluids. Journal of Chemical Physics,
+
+    135:104902, 2011.
+
+[23] I.S. Santos de Oliveira, W.K. den Otter, and W.J. Briels. Alignment and segregation
+
+    of bidisperse colloids in a shear-thinning viscoelastic fluid under shear flow. Europhysics
+
+    Letters, 101:28002, 2013.
+
+[24] G. D’Avino, F. Greco, M.A. Hulsen, and P.L. Maffetone. Rheology of viscoelastic suspen-
+
+    sions of spheres under small and large amplitude oscillatory shear by numerical simulations.
+
+    Journal of Rheology, 57(3):813–839, 2013.
+
+[25] S. Yoon, M.A. Walkley, and O.G. Harlen. Two particle interactions in a confined viscoelastic
+
+    fluid under shear. Journal of Non-Newtonian Fluid Mechanics, 185-186:39–48, 2012.
+
+[26] M. Yang, S. Krishnan, and E.S.G. Shaqfeh. Numerical simulations of the rheology of
+
+    suspensions of rigid spheres at low volume fraction in a viscoelastic fluid under shear.
+
+    Journal of Non-Newtonian Fluid Mechanics, 234:51–68, 2016.
+
+[27] G Li, G.H. McKinley, and A.M. Ardekani. Dynamics of particle migration in channel flow
+
+    of viscoelastic fluids. Journal of Fluid Mechanics, 785:486–505, 2015.
+
+[28] D. Won and C. Kim. Alignment and aggregation of spherical particles in viscoelastic fluid
+
+    under shear flow. Journal of Non-Newtonian Fluid Mechanics, 117:141–146, 2004.
+
+[29] R. Scirocco, J. Vermant, and J. Mewis. Effect of the viscoelasticity of the suspending
+
+    fluid on structure formation in suspensions. Journal of Non-Newtonian Fluid Mechanics,
+
+    117:183–192, 2004.
+
+[30] C. Geuzaine and J.-F. Remacle. Gmsh: A 3D finite element mesh generator with built-
+
+    in pre- and post-processing facilities. International Journal for Numerical Methods in
+
+    Engineering, 79(11):1309–1331, 2009.
+
+[31] H. Giesekus. A simple constitutive equation for polymer fluids based on the concept of
+
+    deformation-dependent tensorial mobility. Journal of Non-Newtonian Fluid Mechanics,
+
+    11:69–109, 1982.
+
+
+                                               38
+[32] G. D’Avino, G. Cicale, M.A. Hulsen, F. Greco, and P.L. Maffettone. Effects of confinement
+
+    on the motion of a single sphere in a sheared viscoelastic liquid. Journal of Non-Newtonian
+
+    Fluid Mechanics, 157:101–107, 2009.
+
+[33] R. Glowinski, T.-W. Pan, T.I. Hesla, and D.D. Joseph. A distributed Lagrange multi-
+
+    plier/fictitious domain method for particulate flows. International Journal of Multiphase
+
+    Flow, 25:755–794, 1999.
+
+[34] G. D’Avino and M.A. Hulsen. Decoupled second-order transient schemes for the flow of
+
+    viscoelastic fluids without a viscous solvent contribution. Journal of Non-Newtonian Fluid
+
+    Mechanics, 165:1602–1612, 2010.
+
+[35] M.A. Hulsen, R. Fattal, and R. Kupferman. Flow of viscoelastic fluids past a cylinder
+
+    at high Weissenberg number: stabilized simulations using matrix logarithms. Journal of
+
+    Non-Newtonian Fluid Mechanics, 127:27–39, 2005.
+
+[36] A.N. Brooks and T.J.R. Hughes. Streamline upwind/Petrov-Galerkin formulations for
+
+    convection dominated flows with particular emphasis on the incompressible Navier-Stokes
+
+    equations. Computational Methods in Applied Mechanical Engineering, 32:199–259, 1982.
+
+[37] H.H. Hu, N.A. Patankar, and M.Y. Zhu. Direct numerical simulations of fluid-solid systems
+
+    using the arbitrary Lagrangian-Eulerian technique. Journal of Computational Physics,
+
+    169:427–462, 2001.
+
+[38] N.O. Jaensson, M.A. Hulsen, and P.D. Anderson. Stokes-Cahn-Hilliard formulations and
+
+    simulations of two-phase flows with suspended rigid particles. Computers and Fluids, 111:1–
+
+    17, 2015.
+
+[39] R. Fattal and R. Kupferman. Constitutive laws for the matrix-logarithm of the conforma-
+
+    tion tensor. Journal of Non-Newtonian Fluid Mechanics, 123:281–285, 2004.
+
+[40] F.P.T. Baaijens. Mixed finite element methods for viscoelastic flow analysis: a review.
+
+    Journal of Non-Newtonian Fluid Mechanics, 79:361–385, 1998.
+
+[41] HSL. A collection of Fortran codes for large scale scientific computation, 2013. http:
+
+    //www.hsl.rl.ac.uk.
+
+
+                                             39
+[42] Y. Saad. SPARSKIT: A Basic Tool Kit for Sparse Matrix Computations. NASA Ames
+
+    Research Center, Moffett Field, CA, Technical Report 2090, 2001.
+
+[43] G. Karypis and V. Kumar. A fast and high quality multilevel scheme for partitioning
+
+    irregular graphs. SIAM Journal on Scientific Computing, 20(1):359–392, 1998.
+
+[44] B. Maury. Direct simulations of 2D fluid-particle flows in biperiodic domains. Journal of
+
+    Computational Physics, 156:325–351, 1999.
+
+[45] F. Snijkers, R. Pasquino, and J. Vermant. Hydrodynamic interactions between two equally
+
+    sized spheres in viscoelastic fluids in shear flow. Langmuir, 29:5701–5713, 2013.
+
+[46] G.B. Jeffery. The motion of ellipsoidal particles immersed in a viscous fluid. Proceedings of
+
+    the Royal Society A: Mathematical, Physical and Engineering Sciences, 102(715):161–179,
+
+    1922.
+
+[47] G. D’Avino, M.A. Hulsen, F. Snijkers, J. Vermant, F. Greco, and P.L. Maffettone. Rotation
+
+    of a sphere in a viscoelastic liquid subjected to shear flow. Part I. Simulation results. Journal
+
+    of Rheology, 52(6):1331–1346, 2008.
+
+[48] F. Snijkers, G. D’Avino, P.L. Maffettone, F. Greco, M.A. Hulsen, and J. Vermant. Rotation
+
+    of a sphere in a viscoelastic liquid subjected to shear flow. Part II. Experimental results.
+
+    Journal of Rheology, 53(2):459–480, 2009.
+
+[49] F. Snijkers, G. D’Avino, P.L. Maffettone, F. Greco, M.A. Hulsen, and J. Vermant. Effect
+
+    of viscoelasticity on the rotation of a sphere in shear flow. Journal of Non-Newtonian Fluid
+
+    Mechanics, 166:363–372, 2011.
+
+[50] R.J. Phillips. Structural instability in the sedimentation of particulate suspensions through
+
+    viscoelastic fluids. Journal of Non-Newtonian Fluid Mechanics, 165:479–488, 2010.
+
+
+
+
+                                                40
+

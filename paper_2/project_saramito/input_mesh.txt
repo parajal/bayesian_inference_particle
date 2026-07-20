@@ -1,0 +1,25 @@
+
+! input_mesh.txt
+
+&comppar
+
+  meshfile = 'mesh.out'
+
+  sphere = T ! if sphere=T, particle is spherical with a radius radr.
+             ! if sphere=F, particle is a spheroid with radii radz, radr.
+
+  radr = 1.0           ! radius of the sphere or the spheroid in r-direction
+  radz = 1.0           ! radius of the spheroid in z-direction, not used
+                       ! for a spherical particle (sphere=T).
+
+  radc = 50.0           ! radius of the enclosing cylinder
+
+  lenc1 = 50.0         ! length of the enclosing cylinder (left of particle)
+  lenc2 = 50.0          ! length of the enclosing cylinder (right of particle)
+
+  dx_part = 0.4        ! element size on the particle boundary
+  dx_box = 4.0         ! element size on the box boundary
+  nelem_min = 1.0      ! minimal element size in between particle and wall is
+                       ! distance in gap / nelem_min
+
+/

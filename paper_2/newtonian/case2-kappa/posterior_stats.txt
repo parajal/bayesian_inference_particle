@@ -1,0 +1,90 @@
+====================================================================================================
+BAYESIAN INFERENCE REPORT
+====================================================================================================
+
+METADATA
+----------------------------------------------------------------------------------------------------
+Mode:                    kappa
+Force:                   3.76991e+01 N
+Particle radius:         1.00000e+00 m
+Number of datasets:      1
+MCMC steps:              3000
+MCMC walkers:            10
+Total MCMC samples:      30000
+Burn-in fraction:        0.5
+Thin factor:             1
+Time derivative order:   2
+Init method:             kmeans
+Post burn-in samples:    15000
+Unload time (t_unload):  2.00000e-01 s
+
+Software
+Python: 3.13.13
+Numpy:  2.4.2
+
+NOISE MODEL & PRIORS
+----------------------------------------------------------------------------------------------------
+Data noise added:        Y = F(x) + omega,  omega ~ N(0, sigma_experiment)
+  sigma_experiment:      1.00000e-03
+
+Covariance model:        Sigma = sigma_noise^2 * I + sigma_bias^2 * K(t) + eps * I
+  K(t_i, t_j)  = exp(-|t_i - t_j| / l_bias)   (exponential / Matern-1/2)
+
+Inferred noise priors:
+  sigma_noise ~ Exp(rate=1.00000e+03)  [prior mean = 1.00000e-03]
+  sigma_bias  ~ Exp(rate=1.00000e+02)  [prior mean = 1.00000e-02]
+  l_bias (fixed):        1.86667e+00
+
+DATASETS
+----------------------------------------------------------------------------------------------------
+Dataset 1:
+  Filename:        newtonian/f-12pi/delta-0.1-0.txt
+  Angle (deg):     0.0
+  Fx (N):          37.69911184307752
+  Fy (N):          0.0
+  Data points (t): 29
+  Data points (x): 29
+  Data points (y): 29
+
+PRIOR BOUNDS
+----------------------------------------------------------------------------------------------------
+Parameter                 Lower           Upper
+kappa              1.00000e-02    1.00000e+02
+
+POSTERIOR SUMMARY
+----------------------------------------------------------------------------------------------------
+Parameter           Mean      Median         Std      CI95_low     CI95_high
+kappa         4.4289e-01  4.4288e-01  6.3002e-05    4.4276e-01    4.4301e-01
+sigma_noise   8.3871e-04  8.2825e-04  1.4089e-04    5.8986e-04    1.1409e-03
+sigma_bias    5.5108e-04  4.7962e-04  4.0458e-04    2.4044e-05    1.5851e-03
+
+POSTERIOR COVARIANCE MATRIX
+----------------------------------------------------------------------------------------------------
+3.9696e-09 -3.2528e-10 -4.1835e-10
+-3.2528e-10 1.9850e-08 -1.8953e-08
+-4.1835e-10 -1.8953e-08 1.6369e-07
+
+POSTERIOR CORRELATION MATRIX
+----------------------------------------------------------------------------------------------------
+   1.000   -0.037   -0.016
+  -0.037    1.000   -0.332
+  -0.016   -0.332    1.000
+
+MCMC DIAGNOSTICS
+----------------------------------------------------------------------------------------------------
+Param             Mean         Std       tau         ESS      Rhat
+kappa       4.4289e-01  6.3002e-05     44.06       340.5    1.0149
+sigma_noise  8.3871e-04  1.4089e-04     31.63       474.2    1.0099
+sigma_bias  5.5108e-04  4.0458e-04     36.62       409.7    1.0057
+
+FORWARD MODEL FIT (TRUE PARAMETERS)
+----------------------------------------------------------------------------------------------------
+Before noise (model vs. clean data):
+  Relative L2 error (X-displacement):  3.396915e-01
+
+After noise (model vs. noisy observations):
+  Relative L2 error (X-displacement):  3.396180e-01
+
+Note: Relative L2 error = ||a - b||_2 / ||a||_2, computed using true parameters passed to plot_data().
+      'Before noise' uses the clean FEM signal; 'After noise' uses the noisy observations.
+

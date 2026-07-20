@@ -1,0 +1,15 @@
+
+! input_newtonian.txt
+
+&comppar
+
+  meshfile = 'mesh.out'
+
+  eta = 1.0              ! constant viscosity
+
+  force = 100            ! imposed force on the particle
+
+  real_storage = 1.4     ! storage real in solver (relative to estimate)
+  integer_storage = 1.4  ! storage real in solver (relative to estimate)
+
+/

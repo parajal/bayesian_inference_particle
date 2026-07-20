@@ -1,0 +1,102 @@
+// Make a mesh consisting of a rectangle with circular particles
+// The full rectangle, including the particles, is meshed.
+// The space between the particles and the rectangle is physical volume 1
+// The space inside the particles is physical volume 2
+//
+// The input parameters are:
+//
+//   ox, oy = the coordinates of the vertex with lower coordinates
+//   lx, ly = the lengths of the box along the x-, y-directions
+//   nobj = the number of particles
+//   xp(i,:), yp(i,:) = the coordinates of the center of the circle i
+//   rp(i) = the radius of the circle i
+//   dx_box = the characteristic line element size on the box side
+//   dx_part = the characteristic line element size on the particle surface
+//
+// NOTE: the parameters have to be defined before including this file.
+//
+// Points and curves are numbered as follows:
+//
+// P1 = (ox,    oy   )
+// P2 = (ox+lx, oy   )
+// P3 = (ox+lx, oy+ly)
+// P4 = (ox,    oy+ly)
+// C1 = P1-P2  ( parallel to x passing through oy )
+// C2 = P2-P3  ( parallel to y passing through ox+lx )
+// C3 = P3-P4  ( parallel to x passing through oy+ly )
+// C4 = P4-P1  ( parallel to y passing through ox )
+
+// Create domain vertices
+ 
+Point(1) = {ox,    oy,    0.0, dx_box};
+Point(2) = {ox+lx, oy,    0.0, dx_box};
+Point(3) = {ox+lx, oy+ly, 0.0, dx_box};
+Point(4) = {ox,    oy+ly, 0.0, dx_box};
+ 
+For i In {1:4}
+  Physical Point(i) = i;
+EndFor
+
+// Create domain sides
+ 
+Line(1) = {1, 2};
+Line(2) = {2, 3};
+Line(3) = {3, 4};
+Line(4) = {4, 1};
+
+For i In {1:4}
+  Physical Line(i) = i;
+EndFor
+
+Periodic Line {2} = {4} Translate{lx,0,0};
+
+// Create outer boundary
+
+lin_loop[0] = newll;
+Line Loop(lin_loop[0]) = { 1, 2, 3, 4 };
+
+// Circle
+
+Function MakeCircle
+ 
+  p1 = newp; Point(p1) = {x,    y,   0.0,   dx_part};
+  p2 = newp; Point(p2) = {x-r,  y,   0.0,   dx_part};
+  p3 = newp; Point(p3) = {x+r,  y,   0.0,   dx_part};
+ 
+  c1 = newl; Circle(c1) = {p2, p1, p3};
+  c2 = newl; Circle(c2) = {p3, p1, p2};
+ 
+  lin_loop[t] = newll;
+ 
+  Line Loop(lin_loop[t]) = {c1, c2};
+ 
+  Physical Line(t+4) = {c1, c2};
+  
+Return
+
+// Make nobj circles
+
+For t In {1:nobj}
+
+  x = xp[t];
+  y = yp[t];
+  r = rp[t]; 
+
+  Call MakeCircle;
+
+EndFor
+
+// Create surface mesh (with holes)
+ 
+Plane Surface(1) = {lin_loop[]};
+ 
+Physical Surface(1) = {1};
+
+For t In {1:nobj}
+
+  Plane Surface(t+1) = {lin_loop[t]};
+
+EndFor
+ Physical Surface(2) = {2:nobj+1};
+
+// vim: set filetype=gmsh :  //

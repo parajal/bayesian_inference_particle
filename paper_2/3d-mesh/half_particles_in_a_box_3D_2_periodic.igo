@@ -1,0 +1,143 @@
+
+// set some parameters
+
+//lx = 20;
+//ly = 10;
+//lz = 10;
+//dx_box = lx/40;
+//nobj = 1;
+//xp = 0;
+//yp = 0;
+//zp = 0; // this must be zero!
+//rp = 1.4;
+
+Mesh.Optimize = 1;
+Mesh.OptimizeNetgen = 1;
+
+// External domain
+
+Point(1) = { -lx/2, -ly/2, -lz/2, dx_box};
+Point(2) = {  lx/2, -ly/2, -lz/2, dx_box};
+Point(3) = {  lx/2, -ly/2,     0, dx_box};
+Point(4) = { -lx/2, -ly/2,     0, dx_box};
+Point(5) = { -lx/2,  ly/2, -lz/2, dx_box};
+Point(6) = {  lx/2,  ly/2, -lz/2, dx_box};
+Point(7) = {  lx/2,  ly/2,     0, dx_box};
+Point(8) = { -lx/2,  ly/2,     0, dx_box};
+
+For i In {1:8}
+  Physical Point(i) = i;
+EndFor
+
+Line(1) = {1, 2};
+Line(2) = {2, 3};
+Line(3) = {3, 4};
+Line(4) = {4, 1};
+Line(5) = {3, 7};
+Line(6) = {7, 6};
+Line(7) = {6, 2};
+Line(8) = {1, 5};
+Line(9) = {5, 8};
+Line(10) = {8, 4};
+Line(11) = {8, 7};
+Line(12) = {6, 5};
+
+For i In {1:12}
+  Physical Line(i) = i;
+EndFor
+
+Line Loop(1) = { 1,   2,  3,  4};        
+Line Loop(2) = { 2,   5,  6,  7};   
+Line Loop(3) = {12,   9, 11,  6};
+Line Loop(4) = { 4,   8,  9, 10};
+Line Loop(5) = { 1,  -7, 12, -8};      
+
+Plane Surface(1) = {1};
+Plane Surface(2) = {2};
+Plane Surface(3) = {3};
+Plane Surface(4) = {4};
+Plane Surface(5) = {5};
+
+For i In {1:5}
+  Physical Surface(i) = i;
+EndFor
+
+// Make a couple of mesh surfaces periodic
+Periodic Surface {3} = {1} Translate{0,ly,0};
+
+// initialize surface loop
+
+surf_loop[0] = newsl;
+Surface Loop(surf_loop[0]) = {1, 2, 3, 4, 5};
+
+// initalize line loop for front surface (with holes)
+
+line_loop[0] = newll;
+Line loop(line_loop[0]) = {5,-11,10,-3};
+
+
+// Half Sphere
+
+p1 = newp; Point(p1) = {xp,   yp,   zp,   dx_part} ;
+p2 = newp; Point(p2) = {xp+rp, yp,   zp,   dx_part} ;
+p3 = newp; Point(p3) = {xp,   yp+rp, zp,   dx_part} ;
+p4 = newp; Point(p4) = {xp-rp, yp,   zp,   dx_part} ;
+p5 = newp; Point(p5) = {xp,   yp-rp, zp,   dx_part} ;
+p6 = newp; Point(p6) = {xp,   yp,   zp-rp, dx_part} ;
+
+c1 = newl; Circle(c1) = {p2, p1, p3};
+c2 = newl; Circle(c2) = {p3, p1, p4};
+c3 = newl; Circle(c3) = {p4, p1, p5};
+c4 = newl; Circle(c4) = {p5, p1, p2};
+c5 = newl; Circle(c5) = {p2, p1, p6};
+c6 = newl; Circle(c6) = {p6, p1, p3};
+c7 = newl; Circle(c7) = {p6, p1, p4};
+c8 = newl; Circle(c8) = {p5, p1, p6};
+  
+// Spherical surface
+  
+lin1 = newll; Line Loop(lin1) = {c1, -c6, -c5};
+lin2 = newll; Line Loop(lin2) = {c2, -c7,  c6};
+lin3 = newll; Line Loop(lin3) = {c3,  c8,  c7};
+lin4 = newll; Line Loop(lin4) = {c4,  c5, -c8};
+
+s1 = news; Ruled Surface(s1) = {lin1};
+s2 = news; Ruled Surface(s2) = {lin2};
+s3 = news; Ruled Surface(s3) = {lin3};
+s4 = news; Ruled Surface(s4) = {lin4};
+
+// add particle lines to line loop
+
+line_loop[1] = newll;
+Line Loop(line_loop[1]) = {c1, c2, c3, c4};
+
+// add particle surfaces to surf loop
+
+surf_loop[1] = newsl;
+Surface Loop(surf_loop[1]) = {s1, s2, s3, s4};
+
+Physical Surface(7) = {s1, s2, s3, s4};
+
+Physical Line(13) = {c1, c2, c3, c4};
+
+// front surface with hole
+Plane Surface(6) = {line_loop[]};
+
+surf_loop[2] = newsl;
+Surface Loop(surf_loop[2]) = {6};
+
+Physical Surface(6) = 6;
+
+// added extra
+ss=news; Plane Surface(ss) = {line_loop[1]};
+surf_loop_front = newsl;
+Surface Loop(surf_loop_front) = {ss};
+
+Volume(1) = {surf_loop[]} ;
+
+Volume(2) = {surf_loop[1],surf_loop_front} ;
+
+Physical Volume(1) = {1};
+Physical Volume(2) = {2};
+
+// vim: set filetype=gmsh :  //
