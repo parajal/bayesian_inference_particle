@@ -21,9 +21,9 @@ class Likelihood:
         K = self._bias_correlation_matrix(t, self.l_bias)
         return sigma_noise**2 * np.eye(len(t)) + sigma_bias**2 * K
 
-    def _use_y_displacement(self, d):
-        """Return True when a dataset is fitted only through y."""
-        return self._fit_components(d) == ("y",)
+    # def _use_y_displacement(self, d):
+    #     """Return True when a dataset is fitted only through y."""
+    #     return self._fit_components(d) == ("y",)
 
     @staticmethod
     def _gaussian_log_likelihood(residual, covariance):
