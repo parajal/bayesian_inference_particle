@@ -1,12 +1,12 @@
-from src.data_io import DataIO
-from src.mcmc import Diagnostics
-from src.main import InferenceProcedure
-from src.forward_models import ForwardModels
-from src.likelihood import Likelihood
-from src.plotting import Plotting
-from src.priors import Priors
-from src.transforms import Transforms
-from src.wall_corrections import WallCorrections
+from packages.data_io import DataIO
+from packages.sampler import Diagnostics
+from packages.main import InferenceProcedure
+from packages.forward_models import ForwardModels
+from packages.likelihood import Likelihood
+from packages.plotting import Plotting
+from packages.priors import Priors
+from packages.logtransforms import Transforms
+from packages.wall_corrections import WallCorrections
 
 __all__ = [
     "DataIO",
