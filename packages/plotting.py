@@ -58,6 +58,15 @@ class Plotting:
         "viscoelastic_bounded_perp",
     )
 
+    @staticmethod
+    def _component_figure_name(base_name, component, components):
+        return base_name if len(components) == 1 else f"{base_name}_{component}"
+    
+    def _plot_components(self):
+        components = list(self._fit_components(self.data))
+        default = "y" if self.is_perpendicular() else "x"
+        return components or [default]
+    
     def _make_output_dir(self):
         self.output_dir = os.path.abspath("plots")
         os.makedirs(self.output_dir, exist_ok=True)
@@ -70,146 +79,62 @@ class Plotting:
         plt.gcf().savefig(path, bbox_inches="tight")
         print(f"Saved figure: {path}")
 
-    def _model_component_at(self, theta, t, d, component=None):
-        """Evaluate one displacement component for a dataset."""
-        angle = float(d.get("angle", self.theta)) % 180.0
-        component = (
-            "y" if abs(angle - 90.0) < 1e-6 else "x"
-        ) if component is None else str(component).lower()
-        if component not in ("x", "y"):
-            raise ValueError("component must be 'x' or 'y'.")
-
-        if self.material_model == "newtonian":
-            return self.model_newtonian(
-                theta[0], t, d["F"], self._get_delta0(theta),
-                L=d.get("L"), component=component, angle=angle,
-            )
-        return self.model_viscoelastic(
-            theta[0], theta[1], theta[2], t, d["F"],
-            self._get_delta0(theta), t_unload=d.get("t_unload"),
-            component=component, angle=angle,
-        )
-
-    def _fit_components(self, d):
-        angle = float(d.get("angle", self.theta)) % 180.0
-        default = "y" if abs(angle - 90.0) < 1e-6 else "x"
-        return tuple(d.get("fit_components") or (default,))
-    
-    def _model_at(self, theta, t, d, component=None):
-        """Forward model at physical parameters theta on time grid t for one dataset."""
-        return self._model_component_at(theta, t, d, component=component)
-
-    def _plot_components(self):
-        components = []
-        for d in self.datasets:
-            for component in self._fit_components(d):
-                if component not in components:
-                    components.append(component)
-        default = "y" if abs(float(self.theta) % 180.0 - 90.0) < 1e-6 else "x"
-        return components or [default]
-
-    @staticmethod
-    def _component_ylabel(component):
-        return rf"${component}(t)$"
-
-    @staticmethod
-    def _component_figure_name(base_name, component, components):
-        return base_name if len(components) == 1 else f"{base_name}_{component}"
-
     def plot_data(self, theta_true: Tuple[float, ...]) -> None:
         """Plot each dataset (FOM points) against the forward model at theta_true (SAM line)."""
-        if not self.datasets:
-            raise RuntimeError("No data loaded.")
-        if self.model not in self._ALL_MODELS:
-            raise ValueError(f"Invalid model in plot_data: {self.model!r}")
         self._theta_true = tuple(theta_true) if theta_true is not None else None
 
         components = self._plot_components()
-        multi = len(self.datasets) > 1
         lw = 3 if self.material_model == "newtonian" else 2
+        d = self.data
 
         for component in components:
-            _, ax = plt.subplots(figsize=(8, 6))
-            handles, force_labels = [], []
-            plotted = False
-
-            for i, d in enumerate(self.datasets):
-                obs = d.get(component)
-                if obs is None:
-                    continue
-                # Bounded creep draws the model on a fine fixed grid; all others on the data grid.
-                t_model = np.linspace(0.0, 0.5, 400) if self.model == "viscoelastic_bounded" else d["t"]
-                model = self._model_at(theta_true, t_model, d, component=component)
-                color = plt.cm.tab10.colors[i % 10] if multi else "red"
-
-                ax.scatter(d["t"], obs, color="black", s=30, marker="o", edgecolors="black",
-                           linewidths=0.5, zorder=3, label="FOM" if not plotted else None)
-                (line,) = ax.plot(t_model, model, color=color, lw=lw, zorder=2,
-                                  label=None if multi else "SAM")
-                plotted = True
-                if multi:
-                    handles.append(line)
-                    force_labels.append(rf"$F = {float(d['F']) / np.pi:g}\pi$")
-
-            if not plotted:
+            obs = d.get(component)
+            if obs is None:
                 continue
+            # Bounded creep draws the model on a fine fixed grid; all others on the data grid.
+            t_model = np.linspace(0.0, 0.5, 400) if self.model == "viscoelastic_bounded" else d["t"]
+            model = self._model_at(theta_true, t_model, d, component=component)
 
-            ax.set(xlabel=r"$t$", ylabel=self._component_ylabel(component))
+            _, ax = plt.subplots(figsize=(8, 6))
+            ax.scatter(d["t"], obs, color="black", s=30, marker="o", edgecolors="black",
+                       linewidths=0.5, zorder=3, label="FOM")
+            ax.plot(t_model, model, color="red", lw=lw, zorder=2, label="SAM")
+
+            ax.set(xlabel=r"$t$", ylabel=rf"${component}(t)$")
             ax.grid(alpha=0.3)
-            if multi:
-                ax.legend(handles, force_labels, loc="lower right", framealpha=0.95)
-            else:
-                ax.legend(loc="best", framealpha=0.95)
+            ax.legend(loc="best", framealpha=0.95)
             self._save_current_figure(self._component_figure_name("data_vs_noise", component, components))
             plt.show()
 
     def plot_model_error(self, theta_true: Tuple[float, ...]) -> None:
         """Plot the absolute error |FOM - SAM| at theta_true over time, per dataset."""
-        if not self.datasets:
+        if self.data is None:
             raise RuntimeError("No data loaded.")
         if self.model not in self._ALL_MODELS:
             raise ValueError(f"Invalid model in plot_model_error: {self.model!r}")
 
         components = self._plot_components()
-        multi = len(self.datasets) > 1
+        d = self.data
 
         for component in components:
-            _, ax = plt.subplots(figsize=(8, 6))
-            all_errors = []
-
-            for i, d in enumerate(self.datasets):
-                obs = d.get(component)
-                if obs is None:
-                    continue
-                # Evaluate on the data grid so it aligns point-by-point with the FOM data.
-                model = self._model_at(theta_true, d["t"], d, component=component)
-                error = np.abs(np.asarray(obs, dtype=float) - model)
-                all_errors.append(error)
-                color = plt.cm.tab10.colors[i % 10] if multi else "red"
-                label = rf"$F = {float(d['F']) / np.pi:g}\pi$" if multi else None
-                ax.plot(d["t"], error, color=color, lw=2, marker="o", ms=4, label=label)
-                if multi:
-                    print(
-                        f"  dataset[{i}] {component}: "
-                        f"max |error| = {error.max():.6g}, mean |error| = {error.mean():.6g}"
-                    )
-
-            if not all_errors:
+            obs = d.get(component)
+            if obs is None:
                 continue
+            # Evaluate on the data grid so it aligns point-by-point with the FOM data.
+            model = self._model_at(theta_true, d["t"], d, component=component)
+            error = np.abs(np.asarray(obs, dtype=float) - model)
 
+            _, ax = plt.subplots(figsize=(8, 6))
+            ax.plot(d["t"], error, color="red", lw=2, marker="o", ms=4)
             ax.set(
                 xlabel=r"$t$",
                 ylabel=rf"$|{component}_{{\mathrm{{FOM}}}} - {component}_{{\mathrm{{SAM}}}}|$",
             )
             ax.grid(alpha=0.3)
-            if multi:
-                ax.legend(loc="best", framealpha=0.95)
             self._save_current_figure(self._component_figure_name("model_error", component, components))
             plt.show()
 
-            errors = np.concatenate(all_errors)
-            label = f"Overall {component} model error" if multi else f"{component} model error"
-            print(f"{label}: max |error| = {errors.max():.6g}, mean |error| = {errors.mean():.6g}")
+            print(f"{component} model error: max |error| = {error.max():.6g}, mean |error| = {error.mean():.6g}")
 
     def plot_corner(self, theta_true=None) -> None:
         """Corner plot of every inferred parameter in physical coordinates."""
@@ -327,7 +252,7 @@ class Plotting:
     ) -> None:
         if self.samples is None:
             raise RuntimeError("Run MCMC first.")
-        if not self.datasets:
+        if self.data is None:
             raise RuntimeError("No data loaded.")
         if isinstance(theta_true, (int, float, np.number)):
             if n_sigma != 1.96 and nsamples_pred == 5000:
@@ -425,49 +350,40 @@ class Plotting:
         if self.model not in self._ALL_MODELS:
             raise ValueError(f"Invalid model in plot_posterior_predictive: {self.model!r}")
 
-        colors = plt.cm.tab10.colors
-        multi = len(self.datasets) > 1
         from scipy.stats import norm as _norm
 
         nominal_cov = float(2.0 * _norm.cdf(n_sigma) - 1.0)
         self.pp_diagnostics = {}
         components = self._plot_components()
+        d = self.data
 
         for component in components:
-            _, ax = plt.subplots(figsize=(8, 6))
-            _pp_diag = []
-            plotted = False
-
-            for _di, d in enumerate(self.datasets):
-                t = d["t"]
-                obs = d.get(component)
-                if obs is None:
-                    continue
-                X_pred = np.array(
-                    [self._model_at(th, d["t"], d, component=component) for th in theta_draws]
-                )
-                mean_pred, pred_lo, pred_hi, sigma_total = _predictive_from_draws(X_pred, obs, d)
-                _pp_diag.append((
-                    f"dataset[{_di}] {component}",
-                    (obs - mean_pred) / sigma_total,
-                    float(np.mean((obs >= pred_lo) & (obs <= pred_hi))),
-                ))
-                col = colors[_di % len(colors)] if multi else "steelblue"
-                ax.fill_between(t, pred_lo, pred_hi, color=col, alpha=0.25)
-                ax.plot(t, mean_pred, color=col, lw=1.5, zorder=4)
-                ax.scatter(t, obs, color="black", s=10, zorder=5, marker="o",
-                           edgecolors="black", linewidths=0.5, alpha=0.8)
-                plotted = True
-
-            if not plotted:
+            t = d["t"]
+            obs = d.get(component)
+            if obs is None:
                 continue
+            X_pred = np.array(
+                [self._model_at(th, d["t"], d, component=component) for th in theta_draws]
+            )
+            mean_pred, pred_lo, pred_hi, sigma_total = _predictive_from_draws(X_pred, obs, d)
+            _pp_diag = [(
+                component,
+                (obs - mean_pred) / sigma_total,
+                float(np.mean((obs >= pred_lo) & (obs <= pred_hi))),
+            )]
+
+            _, ax = plt.subplots(figsize=(8, 6))
+            ax.fill_between(t, pred_lo, pred_hi, color="steelblue", alpha=0.25)
+            ax.plot(t, mean_pred, color="steelblue", lw=1.5, zorder=4)
+            ax.scatter(t, obs, color="black", s=10, zorder=5, marker="o",
+                       edgecolors="black", linewidths=0.5, alpha=0.8)
 
             if logx:
                 ax.set_xscale("log")
             if logy:
                 ax.set_yscale("log")
             ax.set_xlabel("$t$")
-            ax.set_ylabel(self._component_ylabel(component))
+            ax.set_ylabel(rf"${component}(t)$")
             ax.grid(True, alpha=0.3)
             custom = Line2D([0], [0], label="Posterior predictive")
             h, lbl = ax.get_legend_handles_labels()

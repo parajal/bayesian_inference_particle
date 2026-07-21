@@ -50,16 +50,16 @@ class InferenceProcedure(
         nwalkers: int | str = "auto",
         thin_factor: int = 1,
     ) -> None:
-        theta = float(theta) % 180.0
+        theta = float(theta)
+        self.theta = theta
         self.material_model = str(material_model).strip().lower()
         self.boundary_model = str(boundary_model).strip().lower()
         self.model = f"{self.material_model}_{self.boundary_model}"
-        if self.boundary_model == "bounded" and np.isclose(theta, 90.0):
+        if self.boundary_model == "bounded" and self.is_perpendicular():
             self.model += "_perp"
 
         self.force = float(force)
         self.a = float(a)
-        self.theta = theta
         self.delta0 = None if delta0 is None else float(delta0)
         self.L = None if L is None else float(L)
         self.t_unload = t_unload
@@ -73,7 +73,7 @@ class InferenceProcedure(
             "lambda_": lambda_bounds,
         }
 
-        self.datasets = []
+        self.data = None
         self.sampler = None
         self.samples = None
 
@@ -143,6 +143,10 @@ class InferenceProcedure(
 
     def _bias_is_disabled(self) -> bool:
         return self.sigma_bias is None
+
+    def is_perpendicular(self) -> bool:
+        """True when loading is perpendicular to the wall (theta = 90 deg): only y(t) moves."""
+        return abs(float(self.theta) - 90.0) < 1e-6
 
     def _get_delta0(self, theta: np.ndarray | None = None) -> float | None:
         if self.boundary_model != "bounded":

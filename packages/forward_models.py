@@ -39,10 +39,10 @@ class ForwardModels:
         result[:, t >= t_unload] = recovery.y
         return result
 
-    def model_newtonian(self, eta, t, F, delta0=None, L=None, component=None, angle=None):
+    def model_newtonian(self, eta, t, F, delta0=None, L=None):
         """Newtonian displacement using boundary_model and theta."""
-        angle = float(self.theta if angle is None else angle) % 180.0
-        component = ( "y" if abs(angle - 90.0) < 1e-6 else "x" )
+        angle = float(self.theta)
+        component = "y" if self.is_perpendicular() else "x"
         x = np.zeros_like(t) ; y = np.zeros_like(t)
         drag = 6.0 * np.pi * self.a * eta
         theta = np.deg2rad(angle)
@@ -64,12 +64,12 @@ class ForwardModels:
 
         return y if component == "y" else x
 
-    def model_viscoelastic(self, eta_s, eta_p, lambda_, t, F, delta0=None, t_unload=None, component=None, angle=None):
+    def model_viscoelastic(self, eta_s, eta_p, lambda_, t, F, delta0=None, t_unload=None, component=None):
         """Viscoelastic displacement selected by boundary_model and theta."""
         t = np.asarray(t, dtype=float)
-        angle = float(self.theta if angle is None else angle) % 180.0
+        angle = float(self.theta)
         component = (
-            "y" if abs(angle - 90.0) < 1e-6 else "x"
+            "y" if self.is_perpendicular() else "x"
         ) if component is None else str(component).lower()
         if component not in ("x", "y"):
             raise ValueError("component must be 'x' or 'y'.")
@@ -106,7 +106,7 @@ class ForwardModels:
         if delta0 is None or not np.isfinite(delta0) or delta0 <= 0.0:
             raise ValueError("bounded viscoelastic model requires a positive delta0.")
 
-        if abs(angle - 90.0) < 1e-6:
+        if self.is_perpendicular():
             if component == "x":
                 return np.zeros_like(t)
 
@@ -136,3 +136,24 @@ class ForwardModels:
         if sol is None:
             return None
         return sol[1] if component == "y" else sol[0]
+
+    def _model_component_at(self, theta, t, d, component=None):
+        """Evaluate one displacement component for a dataset."""
+        component = ( "y" if self.is_perpendicular() else "x"
+        ) if component is None else str(component).lower()
+        if component not in ("x", "y"):
+            raise ValueError("component must be 'x' or 'y'.")
+
+        if self.material_model == "newtonian":
+            return self.model_newtonian(
+                theta[0], t, d["F"], self._get_delta0(theta), L=d.get("L"),
+            )
+        return self.model_viscoelastic(
+            theta[0], theta[1], theta[2], t, d["F"],
+            self._get_delta0(theta), t_unload=d.get("t_unload"),
+            component=component,
+        )
+
+    def _model_at(self, theta, t, d, component=None):
+        """Forward model at physical parameters theta on time grid t for one dataset."""
+        return self._model_component_at(theta, t, d, component=component)

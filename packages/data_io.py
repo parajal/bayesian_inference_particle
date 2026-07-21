@@ -9,7 +9,7 @@ def _recenter(values):
 
 def _max_disp(values) -> float:
     """Maximum displacement in a series."""
-    return float(np.max(values))
+    return float(np.max(np.abs(values)))
 
 def _thin(values, factor):
     """Keep every ``factor``-th sample."""
@@ -24,17 +24,17 @@ def _realized_sigma(values) -> float:
 class DataIO:
     """Load one dataset, thin it, add experimental noise, and set priors."""
 
-    def _parse_columns(self, data, use_y, angle):
+    def _parse_columns(self, data, use_y):
         t = np.asarray(data[:, 0], dtype=float)
         x = y = None
 
-        if abs(float(angle) % 180.0 - 90.0) < 1e-6:
+        if self.is_perpendicular():
             y = _recenter(data[:, 2])
             components = ("y",)
         else:
             x = np.asarray(data[:, 1], dtype=float)
             components = ("x",)
-            if use_y:
+            if use_y and self.material_model == "viscoelastic" and self.boundary_model == "bounded":
                 y = _recenter(data[:, 2])
                 components = ("x", "y")
 
@@ -84,15 +84,14 @@ class DataIO:
         path = os.path.join(root, filename)
         data = np.atleast_2d(np.loadtxt(path))
 
-        angle = self.theta
-        Fx = self.force * np.cos(np.deg2rad(angle))
-        Fy = self.force * np.sin(np.deg2rad(angle))
+        Fx = self.force * np.cos(np.deg2rad(self.theta))
+        Fy = self.force * np.sin(np.deg2rad(self.theta))
 
         thin_factor = int(getattr(self, "thin_factor", 1) or 1)
         if thin_factor < 1:
             raise ValueError("thin_factor must be a positive integer.")
 
-        t, x, y, components = self._parse_columns(data, self.use_y, angle)
+        t, x, y, components = self._parse_columns(data, self.use_y)
         t, x, y = (_thin(series, thin_factor) for series in (t, x, y))
 
         d = {
@@ -102,7 +101,7 @@ class DataIO:
             "F": self.force,
             "Fx": Fx,
             "Fy": Fy,
-            "angle": angle,
+            "angle": self.theta,
             "fit_components": components,
         }
 
@@ -120,10 +119,9 @@ class DataIO:
         self._sigma_priors_from_data(d)
 
         self.data = d
-        self.datasets = [d]
 
         print(
-            f"Loaded {os.path.basename(path)}: angle={angle:.1f}\u00b0, "
+            f"Loaded {os.path.basename(path)}: angle={self.theta:.1f}\u00b0, "
             f"Fx={Fx:.3e}, Fy={Fy:.3e}, "
             f"components={','.join(components)}, n_points={len(t)}"
         )

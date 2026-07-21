@@ -71,7 +71,7 @@ class Sampler:
 
         print(f"\nWarm-up: {n_warmup} steps x {self.nwalkers} walkers")
         sampler = emcee.EnsembleSampler(self.nwalkers, self.ndim, self.log_posterior, moves=moves)
-        sampler.run_mcmc(p0, self.nsteps, progress=True)
+        sampler.run_mcmc(p0, n_warmup, progress=True)
 
         chain = sampler.get_chain(flat=True)
         log_prob = sampler.get_log_prob(flat=True)

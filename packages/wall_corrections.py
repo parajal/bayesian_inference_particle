@@ -38,17 +38,10 @@ class WallCorrections:
         beta_n = np.expand_dims(beta, axis=-1)
 
         with np.errstate(over="ignore", invalid="ignore", divide="ignore"):
-            term = (
-                (
-                    2.0 * np.sinh((2 * n + 1) * beta_n)
-                    + (2 * n + 1) * np.sinh(2.0 * beta_n)
-                )
-                / (
-                    4.0 * np.sinh((n + 0.5) * beta_n) ** 2
-                    - (2 * n + 1) ** 2 * np.sinh(beta_n) ** 2
-                )
-                - 1.0
-            )
+            term = ( ( 2.0 * np.sinh((2 * n + 1) * beta_n)
+                    + (2 * n + 1) * np.sinh(2.0 * beta_n))
+                / ( 4.0 * np.sinh((n + 0.5) * beta_n) ** 2
+                    -(2 * n + 1) ** 2 * np.sinh(beta_n) ** 2) - 1.0)
             term = np.where(np.isfinite(term), term, 0.0)
             total = np.sum(
                 n * (n + 1) / ((2 * n - 1) * (2 * n + 3)) * term,

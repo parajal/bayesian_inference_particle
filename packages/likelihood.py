@@ -12,6 +12,10 @@ from scipy.linalg import cho_factor, cho_solve
 class Likelihood:
     """Implements the likelihood."""
 
+    def _fit_components(self, d):
+        default = "y" if self.is_perpendicular() else "x"
+        return tuple(d.get("fit_components") or (default,))
+    
     @staticmethod
     def _covariance_matrix(t, sigma_noise, sigma_bias, l_bias):
         """Sigma = sigma_noise^2 I + sigma_bias^2 K."""
@@ -41,6 +45,7 @@ class Likelihood:
             log_sigma = 2.0 * n * np.log(sigma_noise)
 
         return -r_sq/2.0 - log_sigma/2.0 - (n/2.0) * np.log(2.0 * np.pi)
+
 
     def _residuals(self, d, theta):
         """r = x_obs - d(10^mu_hat), one entry per fitted component."""
