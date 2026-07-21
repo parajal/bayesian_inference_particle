@@ -154,7 +154,7 @@ class Plotting:
             if obs is None:
                 continue
             # Bounded creep draws the model on a fine fixed grid; all others on the data grid.
-            t_model = np.linspace(0.0, 0.5, 400) if self.model == "viscoelastic_bounded" else d["t"]
+            t_model = np.linspace(0.0, max(d["t"]), 400) if self.model == "viscoelastic_bounded" else d["t"]
             model = self._model_component(theta_true, t_model, d, component=component)
 
             _, ax = plt.subplots(figsize=(8, 6))
@@ -174,7 +174,8 @@ class Plotting:
         """Plot the absolute model error ``|FOM - SAM|`` over time, per component.
 
         This is the pure discrepancy between the two models, so it uses the
-        noise-free FOM series rather than the noisy observations.
+        noise-free FOM series rather than the noisy observations. The printed
+        relative L2 error is ``||FOM - SAM||_2 / ||FOM||_2``.
 
         Parameters
         ----------
@@ -200,9 +201,10 @@ class Plotting:
             fom = d.get(f"{component}_clean", d.get(component))
             if fom is None:
                 continue
+            fom = np.asarray(fom, dtype=float)
             # Evaluate on the data grid so it aligns point-by-point with the FOM data.
             model = self._model_component(theta_true, d["t"], d, component=component)
-            error = np.abs(np.asarray(fom, dtype=float) - model)
+            error = np.abs(fom - model)
 
             _, ax = plt.subplots(figsize=(8, 6))
             ax.plot(d["t"], error, color="red", lw=2, marker="o", ms=4)
@@ -216,8 +218,11 @@ class Plotting:
             )
             plt.show()
 
+            fom_norm = np.linalg.norm(fom)
+            relative_l2 = np.linalg.norm(error) / fom_norm if fom_norm > 0 else np.nan
             print(f"{component} model error: max |error| = {error.max():.6g}, "
-                  f"mean |error| = {error.mean():.6g}")
+                  f"mean |error| = {error.mean():.6g}, "
+                  f"relative L2 error = {relative_l2:.6g}")
 
     def plot_corner(self, theta_true=None) -> None:
         """Corner plot of every inferred parameter in physical coordinates.
@@ -403,8 +408,6 @@ class Plotting:
         labels = self._get_parameter_labels(latex=False)
         sn_draws = np.abs(self.samples[sel, labels.index("sigma_noise")])
 
-        # With sigma_bias=None there is no discrepancy term: a replicate is just
-        # the forward model at a posterior draw plus measurement noise.
         use_bias = not self._bias_is_disabled()
         if self._bias_is_inferred():
             sb_draws = np.abs(self.samples[sel, labels.index("sigma_bias")])
@@ -497,15 +500,6 @@ class Plotting:
             lbl.append("Posterior predictive")
             ax.legend(h, lbl, loc="best", framealpha=0.9,
                       handler_map={custom: _BandWithLineHandler()})
-
-            if condition_discrepancy:
-                print(f"\nConditional discrepancy reconstruction coverage "
-                      f"({component}, observed grid):")
-            else:
-                print(f"\nPosterior-predictive adequacy ({component}, replicated data):")
-            print(f"  Nominal central coverage of band: {nominal_cov:6.1%}")
-            print("  " + "-" * 64)
-            print(f"  {'series':<18}{'cover':>8}{'RMS z':>10}{'max|z|':>10}{'mean z':>10}")
 
             diagnostics = dict(
                 coverage=cover,

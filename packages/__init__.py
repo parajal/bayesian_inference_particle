@@ -1,2 +1,4 @@
 from .main import InferenceProcedure
-__all__ = ["InferenceProcedure"]
+from .joint import JointInferenceProcedure
+
+__all__ = ["InferenceProcedure", "JointInferenceProcedure"]

@@ -274,8 +274,7 @@ class InferenceProcedure(
             return self.delta0
         raise ValueError(
             "bounded model requires delta0 in theta or "
-            "InferenceProcedure(..., delta0=...)."
-        )
+            "InferenceProcedure(..., delta0=...).")
 
     def _get_fixed_bias(self) -> float | None:
         """Return ``sigma_bias`` when it is a fixed number.
@@ -312,6 +311,5 @@ class InferenceProcedure(
             float(theta[idx + 1]) if self._bias_is_inferred() else self._get_fixed_bias()
         )
         return sigma_noise, sigma_bias
-
 
 __all__ = ["InferenceProcedure"]

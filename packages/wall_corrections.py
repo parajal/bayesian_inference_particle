@@ -1,9 +1,4 @@
-"""Hydrodynamic wall corrections for a sphere near a plane wall.
-
-Parallel motion uses the Zeng interpolant; perpendicular motion uses Brenner's
-exact series. Both are drag ratios ``f = F / (6 pi eta a U) >= 1`` written in
-terms of the wall gap ``delta`` and the particle radius ``self.a``.
-"""
+"""Hydrodynamic wall corrections for a sphere near a plane wall."""
 
 import numpy as np
 
@@ -22,7 +17,7 @@ class WallCorrections:
         float
             Lower clamp on ``delta``, keeping the diverging series finite.
         """
-        return 1e-4 * self.a
+        return 1e-3 * self.a
 
     def _wall_factors(self, delta: float) -> tuple[float, float]:
         """Both correction factors at a single gap, clamped at ``_min_gap``.

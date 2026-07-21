@@ -1,10 +1,4 @@
-"""Gaussian likelihood for the bead-trajectory inference.
-
-The observation error is the sum of independent measurement noise and a
-correlated model discrepancy, so the combined error is zero-mean Gaussian with
-covariance ``Sigma``. Residuals are taken against the forward model evaluated at
-the physical parameters ``10**mu_hat``, and the log-likelihood is the Gaussian
-density at that residual.
+"""Gaussian likelihood for the particle-trajectory inference.
 """
 
 import numpy as np
