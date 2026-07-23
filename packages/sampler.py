@@ -4,10 +4,14 @@ import warnings
 
 import emcee
 import numpy as np
+from sklearn.cluster import KMeans
 
 
 class Sampler:
     """MCMC sampling, diagnostics, and walker initialisation."""
+
+    _KM_NINIT = 10
+    _KM_MAXITER = 300
 
     # ---------------------------------------------------------------- diagnostics
     @staticmethod
@@ -31,14 +35,20 @@ class Sampler:
         var_hat = ((n_samples - 1) / n_samples) * within + between / n_samples
         return np.sqrt(var_hat / within)
 
-    def print_results(self) -> dict:
-        """Print and return the posterior mean, std, and R-hat per parameter.
+    def print_results(self, cred_level: float = 0.95) -> dict:
+        """Print and return posterior summaries per parameter.
+
+        Parameters
+        ----------
+        cred_level : float, optional
+            Central credible level for the reported interval (default 0.95).
 
         Returns
         -------
         dict
             Maps each parameter name to a dict with keys ``"mean"``, ``"std"``,
-            and ``"Rhat"``.
+            ``"Rhat"``, ``"ci_low"`` and ``"ci_high"`` (the equal-tailed
+            ``cred_level`` credible interval).
         """
         raw = self.sampler.get_chain()
         n_chains = raw.shape[1]
@@ -49,32 +59,40 @@ class Sampler:
         chain = self._to_physical(raw[burn:]).transpose(2, 1, 0)
 
         names = self._get_parameter_labels(latex=False)
-        means = np.mean(chain, axis=(1, 2))
-        stds = np.std(chain, axis=(1, 2), ddof=0)
+        flat = chain.reshape(len(names), -1)
+        means = np.mean(flat, axis=1)
+        stds = np.std(flat, axis=1, ddof=0)
         rhat = self._gelman_rubin_diag(chain)
+        q_lo, q_hi = 50.0 * (1.0 - cred_level), 50.0 * (1.0 + cred_level)
+        ci_low, ci_high = np.percentile(flat, [q_lo, q_hi], axis=1)
 
         results = {
-            name: {"mean": float(means[i]), "std": float(stds[i]), "Rhat": float(rhat[i])}
+            name: {"mean": float(means[i]), "std": float(stds[i]),
+                   "Rhat": float(rhat[i]),
+                   "ci_low": float(ci_low[i]), "ci_high": float(ci_high[i])}
             for i, name in enumerate(names)
         }
 
-        print("\n" + "=" * 64)
+        pct = int(round(100 * cred_level))
+        print("\n" + "=" * 78)
         print("MCMC Diagnostics Summary")
-        print("=" * 64)
+        print("=" * 78)
         print(f"Chains: {n_chains}  |  Samples/chain after burn-in: {n_kept}  "
               f"|  Total: {n_chains * n_kept}")
-        print("-" * 64)
-        print(f"{'Parameter':<14s} {'Mean':>14s} {'Std':>14s} {'Rhat':>10s}")
-        print("-" * 64)
+        print("-" * 78)
+        print(f"{'Parameter':<14s} {'Mean':>12s} {'Std':>12s} {'Rhat':>8s} "
+              f"{f'{pct}% CI low':>13s} {f'{pct}% CI high':>13s}")
+        print("-" * 78)
         for name in names:
             r = results[name]
-            print(f"{name:<14s} {r['mean']:14.4e} {r['std']:14.4e} {r['Rhat']:10.4f}")
+            print(f"{name:<14s} {r['mean']:12.4e} {r['std']:12.4e} {r['Rhat']:8.4f} "
+                  f"{r['ci_low']:13.4e} {r['ci_high']:13.4e}")
 
         if len(names) > 1:
             all_rhat = [r["Rhat"] for r in results.values()]
-            print("-" * 64)
-            print(f"{'Mean Rhat':<14s} {'':>14s} {'':>14s} {np.mean(all_rhat):10.4f}")
-            print(f"{'Std Rhat':<14s} {'':>14s} {'':>14s} {np.std(all_rhat):10.4f}")
+            print("-" * 78)
+            print(f"{'Mean Rhat':<14s} {np.mean(all_rhat):>47.4f}")
+            print(f"{'Std Rhat':<14s} {np.std(all_rhat):>47.4f}")
 
         return results
 
@@ -135,7 +153,7 @@ class Sampler:
     ) -> np.ndarray:
         """Run the emcee ensemble sampler and return samples in physical space.
 
-        Walkers start from draws of the prior; see
+        Walkers are seeded at the k-means centres of a prior pool; see
         :meth:`sample_starting_points`.
 
         Parameters
@@ -205,8 +223,8 @@ class Sampler:
             print(f"  {i:02d}: {self._to_physical(p0[i])}")
 
     # ---------------------------------------------------------- walker initialisation
-    def sample_starting_points(self, random_state: int | None = 42) -> np.ndarray:
-        """Draw starting positions for the MCMC walkers from the priors.
+    def _prior_draws(self, rng: np.random.Generator, n: int) -> np.ndarray:
+        """Draw ``n`` samples from the priors in sampler space.
 
         Material parameters are drawn log-uniformly (so uniformly in the log10
         sampler coordinate); the nuisance parameters (noise and optional bias)
@@ -214,25 +232,68 @@ class Sampler:
 
         Parameters
         ----------
+        rng : numpy.random.Generator
+            Random generator.
+        n : int
+            Number of samples.
+
+        Returns
+        -------
+        numpy.ndarray
+            Prior samples, shape ``(n, ndim)``.
+        """
+        bounds = self._get_parameter_bounds()
+        phi = np.zeros((n, self.ndim), dtype=float)
+        for j, (lo, hi) in enumerate(bounds):
+            phi[:, j] = rng.uniform(np.log10(lo), np.log10(hi), size=n)
+        idx = len(bounds)
+        phi[:, idx] = rng.exponential(1.0 / self.sigma_noise_prior, n)
+        if self._bias_is_inferred():
+            phi[:, idx + 1] = rng.exponential(1.0 / self.sigma_bias_prior, n)
+        return phi
+
+    def sample_starting_points(self, random_state: int | None = 42,
+                               pool_factor: int = 20) -> np.ndarray:
+        """Seed the walkers at the k-means centres of a prior pool.
+
+        A pool of ``pool_factor * nwalkers`` prior draws is grouped into
+        ``nwalkers`` k-means clusters, and the cluster centres are used as the
+        starting positions. This spreads the walkers evenly across the prior
+        support rather than scattering them at random. Any centre that the
+        posterior rejects is replaced by the nearest pool point, so every walker
+        starts with a finite log-posterior.
+
+        Parameters
+        ----------
         random_state : int or None, optional
-            Seed for the random generator.
+            Seed for the pool draw and the k-means initialisation.
+        pool_factor : int, optional
+            Pool size as a multiple of ``nwalkers``.
 
         Returns
         -------
         numpy.ndarray
             Walker positions in sampler space, shape ``(nwalkers, ndim)``.
         """
-        bounds = self._get_parameter_bounds()
         rng = np.random.default_rng(random_state)
-        phi = np.zeros((self.nwalkers, self.ndim), dtype=float)
+        phi = self._prior_draws(rng, pool_factor * self.nwalkers)
 
-        for j, (lo, hi) in enumerate(bounds):
-            phi[:, j] = rng.uniform(np.log10(lo), np.log10(hi), size=self.nwalkers)
+        km = KMeans(
+            n_clusters=self.nwalkers,
+            n_init=self._KM_NINIT,
+            max_iter=self._KM_MAXITER,
+            random_state=random_state,
+        )
+        km.fit(phi)
+        centers = km.cluster_centers_
 
-        idx_noise = len(bounds)
-        phi[:, idx_noise] = rng.exponential(1.0 / self.sigma_noise_prior, self.nwalkers)
-        if self._bias_is_inferred():
-            phi[:, idx_noise + 1] = rng.exponential(
-                1.0 / self.sigma_bias_prior, self.nwalkers
-            )
-        return phi
+        # Replace any centre the posterior rejects with the nearest finite pool point.
+        bad = [k for k, c in enumerate(centers) if not np.isfinite(self.log_posterior(c))]
+        if bad:
+            finite = np.array([np.isfinite(self.log_posterior(p)) for p in phi])
+            if not finite.any():
+                raise RuntimeError("No prior draw has a finite posterior; check priors and data.")
+            good = phi[finite]
+            for k in bad:
+                centers[k] = good[np.argmin(np.linalg.norm(good - centers[k], axis=1))]
+        return centers

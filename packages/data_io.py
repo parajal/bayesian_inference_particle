@@ -36,6 +36,25 @@ def _max_disp(values):
     return float(np.max(np.abs(values)))
 
 
+def _hasimoto_Q(L):
+    """Hasimoto mobility ratio ``Q(L)`` for a simple cubic array (Eq. 17).
+
+    Parameters
+    ----------
+    L : float
+        Periodic box size in units of the bead radius.
+
+    Returns
+    -------
+    float
+        ``1 - 2.8373 / L + (4*pi/3) / L**3``; the periodic drag is
+        ``6*pi*eta*a*U / Q``, so dividing a displacement by ``Q`` recovers the
+        unbounded response.
+    """
+    L = float(L)
+    return 1.0 - 2.8373 / L + (4.0 * np.pi / 3.0) / L**3
+
+
 def _realized_sigma(values):
     """Sample standard deviation (``ddof=1``) of a series.
 
@@ -118,7 +137,10 @@ class DataIO:
 
         for component in d["fit_components"]:
             clean = d[component]
-            target_sigma = self.sigma_noise_percent / 100.0 * _max_disp(clean)
+            if self.sigma_noise_value is not None:
+                target_sigma = self.sigma_noise_value
+            else:
+                target_sigma = self.sigma_noise_percent / 100.0 * _max_disp(clean)
             noise = rng.normal(0.0, target_sigma, len(clean))
 
             d[component] = clean + noise
@@ -148,7 +170,7 @@ class DataIO:
         -------
         None
         """
-        peak = max(_max_disp(d[component]) for component in d["fit_components"])
+        peak = max(d["max_displacement"][component] for component in d["fit_components"])
         self.beta = 1.0 / (0.10 * peak)
         self.sigma_noise_prior = self.beta
         self.sigma_bias_prior = self.beta
@@ -185,6 +207,11 @@ class DataIO:
         if self.thin_factor < 1:
             raise ValueError("thin_factor must be a positive integer.")
 
+        if self.sigma_noise_percent is None and self.sigma_noise_value is None:
+            raise ValueError(
+                "set sigma_noise_percent or sigma_noise_value to add measurement noise."
+            )
+
         root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
         path = os.path.join(root, filename)
         data = np.atleast_2d(np.loadtxt(path))
@@ -195,10 +222,19 @@ class DataIO:
         t, x, y, components = self._parse_columns(data, self.use_y)
         t, x, y = (None if s is None else s[::self.thin_factor] for s in (t, x, y))
 
+        Q = None
+        if self.hasimoto_corr:
+            if self.L is None:
+                raise ValueError("hasimoto_corr=True requires L (box size).")
+            Q = _hasimoto_Q(self.L)
+            x = None if x is None else x / Q
+            y = None if y is None else y / Q
+
         d = {
             "t": t, "x": x, "y": y,
             "F": self.force, "Fx": Fx, "Fy": Fy,
             "angle": self.theta, "fit_components": components,
+            "hasimoto_Q": Q,
         }
         if self.material_model == "viscoelastic":
             d["t_unload"] = self.t_unload
@@ -230,6 +266,9 @@ class DataIO:
             f"Fx={d['Fx']:.3e}, Fy={d['Fy']:.3e}, "
             f"components={','.join(components)}, n_points={len(d['t'])}"
         )
+        if d.get("hasimoto_Q") is not None:
+            print(f"Hasimoto correction: L={self.L:.4g}, Q={d['hasimoto_Q']:.4g} "
+                  f"(displacement divided by Q)")
         for component in components:
             print(f"maximum displacement ({component}): "
                   f"{d['max_displacement'][component]:.4g}")

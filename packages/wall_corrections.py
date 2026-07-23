@@ -10,7 +10,7 @@ class WallCorrections:
     """Zeng (parallel) and Brenner (perpendicular) wall-correction factors."""
 
     def _min_gap(self) -> float:
-        """Smallest gap the corrections are evaluated at, ``1e-4 * a``.
+        """Smallest gap the corrections are evaluated at, ``1e-3 * a``.
 
         Returns
         -------

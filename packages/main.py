@@ -54,12 +54,16 @@ class InferenceProcedure(
         boundary_model: str = "bounded",
         delta0: float | None = None,
         t_unload: float | None = 0.2,
+        theta_true: "list[float] | None" = None,
+        hasimoto_corr: bool = False,
+        L: float | None = None,
         eta_s_bounds: tuple[float, float] = (0.01, 100.0),
         eta_p_bounds: tuple[float, float] = (0.01, 100.0),
         lambda_bounds: tuple[float, float] = (0.01, 100.0),
-        delta0_bounds: tuple[float, float] = (0.001, 100.0),
+        delta0_bounds: tuple[float, float] = (1e-4, 100.0),
         sigma_noise_percent: float | None = None,
-        seed: int | None = None,
+        sigma_noise_value: float | None = None,
+        seed: int = 42,
         use_y: bool = False,
         l_bias: float = 1.0,
         sigma_bias: float | str | None = "infer",
@@ -86,11 +90,21 @@ class InferenceProcedure(
             Fixed initial wall gap when it is not inferred.
         t_unload : float or None, optional
             Load-removal time for viscoelastic datasets.
+        hasimoto_corr : bool, optional
+            If ``True``, divide the loaded displacement by the Hasimoto mobility
+            ratio ``Q(L)``, collapsing periodic particle-particle data onto the
+            unbounded response. Requires ``L``.
+        L : float or None, optional
+            Periodic box size (in units of ``a``) used by the Hasimoto
+            correction.
         eta_s_bounds, eta_p_bounds, lambda_bounds, delta0_bounds : tuple of float, optional
             ``(low, high)`` log-uniform prior bounds for each material
             parameter; both entries must be positive.
         sigma_noise_percent : float or None, optional
             Noise level as a percentage of peak displacement (used by data loading).
+        sigma_noise_value : float or None, optional
+            Absolute noise standard deviation. If given, it overrides
+            ``sigma_noise_percent`` and is used directly as the noise scale.
         seed : int or None, optional
             Seed for the synthetic measurement noise added in ``load_data``.
         use_y : bool, optional
@@ -124,7 +138,10 @@ class InferenceProcedure(
         self.a = float(a)
         self.delta0 = None if delta0 is None else float(delta0)
         self.t_unload = t_unload
+        self.theta_true = None if theta_true is None else list(theta_true)
         self._t_unload_eff = t_unload
+        self.hasimoto_corr = bool(hasimoto_corr)
+        self.L = None if L is None else float(L)
 
         self.bounds = {
             "eta_s": eta_s_bounds,
@@ -142,6 +159,9 @@ class InferenceProcedure(
 
         self.sigma_noise_percent = (
             None if sigma_noise_percent is None else float(sigma_noise_percent)
+        )
+        self.sigma_noise_value = (
+            None if sigma_noise_value is None else float(sigma_noise_value)
         )
         self.seed = seed
         self.use_y = bool(use_y)

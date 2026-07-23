@@ -118,7 +118,7 @@ class Likelihood:
         return -r_sq / 2.0 - log_sigma / 2.0 - (n / 2.0) * np.log(2.0 * np.pi)
 
     def _residuals(self, d, theta):
-        """Residuals ``x_obs - model(10**mu_hat)`` for each fitted component.
+        """Residuals ``x_obs - model(theta)`` for each fitted component.
 
         Parameters
         ----------
@@ -161,7 +161,7 @@ class Likelihood:
         sigma_noise, sigma_bias = self._extract_noise_bias(theta)
         residuals = self._residuals(d, theta)
 
-        if sigma_bias is None:
+        if sigma_bias is None or sigma_bias == 0.0:
             terms = (self._log_likelihood(r, sigma_noise=sigma_noise) for r in residuals)
         else:
             cholesky = self._cholesky(
