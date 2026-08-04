@@ -3,3 +3,6 @@ blobs/
 extras/
 plots/
 examples/plots/
+__pycache__/
+packages/__pycache__/
+packages/joint.py
