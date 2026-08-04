@@ -1,8 +1,8 @@
-﻿# Ignore local/generated content that should not be published
+# Ignore local/generated content that should not be published
 blobs/
 extras/
 plots/
 examples/plots/
 __pycache__/
 packages/__pycache__/
-packages/joint.py
+
