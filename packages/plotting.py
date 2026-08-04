@@ -1,14 +1,12 @@
 """Figures: data, model error, priors, corner, traces, posterior predictive."""
 
 import os
-import shutil
 import corner
 import matplotlib.pyplot as plt
 import numpy as np
 from matplotlib.legend_handler import HandlerBase
 from matplotlib.lines import Line2D
 from matplotlib.patches import Rectangle
-from scipy.stats import norm
 
 plt.rcParams.update(
     {
@@ -536,32 +534,22 @@ class Plotting:
 
     def plot_posterior_predictive(
         self,
-        n_sigma: float = 1.96,
         nsamples_pred: int = 5000,
         logx: bool = False,
         logy: bool = False,
-        condition_discrepancy: bool = False,
     ) -> None:
-        """Plot the posterior predictive band against the observed data.
+        """Plot the 95% posterior predictive band against the observed data.
 
-        For each posterior draw the forward model is evaluated, a model
-        discrepancy is added (drawn from its prior, or conditioned on the
-        residual when ``condition_discrepancy`` is set), and measurement noise is
-        added to form a replicated dataset. Coverage diagnostics are printed and
-        stored on ``self.pp_diagnostics``.
+        For each posterior draw the forward model is evaluated, a zero-mean
+        model discrepancy is drawn from its prior, and measurement noise is
+        added to form a replicated dataset.
 
         Parameters
         ----------
-        n_sigma : float, optional
-            Half-width of the band in standard normal deviates; 1.96 gives a
-            central 95% band.
         nsamples_pred : int, optional
             Maximum number of posterior draws used.
         logx, logy : bool, optional
             Use logarithmic axes.
-        condition_discrepancy : bool, optional
-            Condition the discrepancy on the observed residual instead of
-            drawing it from its prior.
 
         Returns
         -------
@@ -577,17 +565,13 @@ class Plotting:
         if self.data is None:
             raise RuntimeError("No data loaded.")
 
-        self.pp_diagnostics = {}
         components = self._fit_components(self.data)
 
         for component in components:
-            summary = self._predictive_summary(
-                component, n_sigma, nsamples_pred, condition_discrepancy
-            )
+            summary = self._predictive_summary(component, nsamples_pred)
             if summary is None:
                 continue
-            t, obs, mean_pred, pred_lo, pred_hi, diagnostics = summary
-            self.pp_diagnostics[component] = diagnostics
+            t, obs, mean_pred, pred_lo, pred_hi = summary
 
             _, ax = plt.subplots(figsize=(8, 6))
             ax.fill_between(t, pred_lo, pred_hi, color="steelblue", alpha=0.25)
@@ -613,39 +597,30 @@ class Plotting:
             ax.legend(h, lbl, loc="best", framealpha=0.9,
                       handler_map={custom: _BandWithLineHandler()})
 
-            print(f"  {component:<18}{diagnostics['coverage']:>8.1%}"
-                  f"{diagnostics['rms_z']:>10.2f}"
-                  f"{diagnostics['max_abs_z']:>10.2f}{diagnostics['mean_z']:>10.2f}")
-
             self._save_current_figure(
                 self._figure_name("posterior_predictive", component, components)
             )
             plt.show()
 
-    def _predictive_summary(self, component, n_sigma=1.96, nsamples_pred=5000,
-                            condition_discrepancy=False):
-        """Posterior-predictive band and coverage diagnostics for one component.
+    def _predictive_summary(self, component, nsamples_pred=5000):
+        """95% posterior-predictive band for one component.
 
         Replicates the loaded dataset from the posterior draws (forward model +
-        optional model discrepancy + measurement noise) and summarises the
+        zero-mean model discrepancy + measurement noise) and summarises the
         replicates. Operates on the currently selected ``self.data``.
 
         Parameters
         ----------
         component : str
             Displacement component to summarise.
-        n_sigma : float, optional
-            Half-width of the band in standard normal deviates.
         nsamples_pred : int, optional
             Maximum number of posterior draws used.
-        condition_discrepancy : bool, optional
-            Condition the discrepancy on the observed residual.
 
         Returns
         -------
         tuple or None
-            ``(t, obs, mean_pred, pred_lo, pred_hi, diagnostics)``, or ``None``
-            if the component is absent from the dataset.
+            ``(t, obs, mean_pred, pred_lo, pred_hi)``, or ``None`` if the
+            component is absent from the dataset.
         """
         d = self.data
         obs = d.get(component)
@@ -661,11 +636,8 @@ class Plotting:
         labels = self._get_parameter_labels(latex=False)
         sn_draws = np.abs(self.samples[sel, labels.index("sigma_noise")])
 
-        use_bias = not self._bias_is_disabled()
         if self._bias_is_inferred():
             sb_draws = np.abs(self.samples[sel, labels.index("sigma_bias")])
-        elif use_bias:
-            sb_draws = np.full(n_draws, abs(float(self._get_fixed_bias())))
         else:
             sb_draws = np.zeros(n_draws)
         l_bias = float(self.l_bias or 1.0)
@@ -674,51 +646,18 @@ class Plotting:
             corr = self._bias_correlation_matrix(t, l_bias)
             return _correlated_normal(rng, corr, sb)
 
-        def _conditional_discrepancy_draw(residual, sn, sb):
-            A = sb * sb * self._bias_correlation_matrix(t, l_bias)
-            Sigma = 0.5 * (A + A.T) + sn * sn * np.eye(len(t))
-            try:
-                L = np.linalg.cholesky(Sigma)
-                alpha = np.linalg.solve(L.T, np.linalg.solve(L, residual))
-                solve_A = np.linalg.solve(L.T, np.linalg.solve(L, A))
-            except np.linalg.LinAlgError:
-                Sigma_inv = np.linalg.pinv(Sigma, hermitian=True)
-                alpha = Sigma_inv @ residual
-                solve_A = Sigma_inv @ A
-            mean = A @ alpha
-            return mean + _correlated_normal(rng, A - A @ solve_A, 1.0), mean
-
         X_pred = np.array(
             [self._model_component(th, t, d, component=component) for th in theta_draws]
         )
-        latent_mean = np.empty_like(X_pred, dtype=float)
         Y_rep = np.empty_like(X_pred, dtype=float)
         for k in range(n_draws):
             g, sn, sb = X_pred[k], float(sn_draws[k]), float(sb_draws[k])
-            if not use_bias or sb <= 0.0:
-                delta = delta_mean = np.zeros_like(g)
-            elif condition_discrepancy:
-                delta, delta_mean = _conditional_discrepancy_draw(obs - g, sn, sb)
-            else:
-                delta = _prior_discrepancy_draw(sb)
-                delta_mean = np.zeros_like(g)
-            latent_mean[k] = g + delta_mean
+            delta = np.zeros_like(g) if sb <= 0.0 else _prior_discrepancy_draw(sb)
             Y_rep[k] = g + delta + rng.standard_normal(len(g)) * sn
 
-        tail = 100.0 * float(norm.cdf(n_sigma))
-        mean_pred = latent_mean.mean(0)
-        pred_lo = np.percentile(Y_rep, 100.0 - tail, axis=0)
-        pred_hi = np.percentile(Y_rep, tail, axis=0)
-        sigma_total = np.maximum(np.std(Y_rep, axis=0), 1e-8)
-        zres = (obs - mean_pred) / sigma_total
-        diagnostics = dict(
-            coverage=float(np.mean((obs >= pred_lo) & (obs <= pred_hi))),
-            rms_z=float(np.sqrt(np.mean(zres**2))),
-            max_abs_z=float(np.max(np.abs(zres))),
-            mean_z=float(np.mean(zres)),
-            nominal_coverage=float(2.0 * norm.cdf(n_sigma) - 1.0),
-        )
-        return t, obs, mean_pred, pred_lo, pred_hi, diagnostics
+        mean_pred = X_pred.mean(0)
+        pred_lo, pred_hi = np.percentile(Y_rep, [2.5, 97.5], axis=0)
+        return t, obs, mean_pred, pred_lo, pred_hi
 
     def plot_results(self, physical_only: bool = True) -> None:
         """Draw the posterior predictive, corner, and trace figures.

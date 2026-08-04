@@ -212,17 +212,16 @@ class JointInferenceProcedure(InferenceProcedure):
                                       if len(self._all_components()) > 1 else "data_vs_noise")
             plt.show()
 
-    def plot_posterior_predictive(self, n_sigma=1.96, nsamples_pred=5000,
-                                  logx=False, logy=False,
-                                  condition_discrepancy=False) -> None:
-        """Overlay the posterior predictive band of every dataset in one figure.
+    def plot_posterior_predictive(self, nsamples_pred=5000,
+                                  logx=False, logy=False) -> None:
+        """Overlay the 95% posterior predictive band of every dataset in one figure.
 
         One figure per fitted component; each dataset gets its own colour, with
         its data as points and its predictive band shaded.
 
         Parameters
         ----------
-        n_sigma, nsamples_pred, condition_discrepancy
+        nsamples_pred
             As in :meth:`Plotting.plot_posterior_predictive`.
         logx, logy : bool, optional
             Use logarithmic axes.
@@ -236,19 +235,16 @@ class JointInferenceProcedure(InferenceProcedure):
         if self.samples is None:
             raise RuntimeError("Run MCMC first.")
         labels = self._dataset_labels()
-        self.pp_diagnostics = {}
 
         for component in self._all_components():
             fig, ax = plt.subplots(figsize=(8, 6))
             t_all, y_all, drawn = [], [], False
-            print(f"\nPosterior-predictive coverage ({component}):")
             for i, _ in enumerate(self.datasets):
                 self.select(i)
-                summary = self._predictive_summary(
-                    component, n_sigma, nsamples_pred, condition_discrepancy)
+                summary = self._predictive_summary(component, nsamples_pred)
                 if summary is None:
                     continue
-                t, obs, mean_pred, pred_lo, pred_hi, diag = summary
+                t, obs, mean_pred, pred_lo, pred_hi = summary
                 color = _COLORS[i % len(_COLORS)]
                 ax.fill_between(t, pred_lo, pred_hi, color=color, alpha=0.25)
                 ax.plot(t, mean_pred, color=color, lw=1.5, zorder=4, label=labels[i])
@@ -256,9 +252,6 @@ class JointInferenceProcedure(InferenceProcedure):
                            edgecolors="black", linewidths=0.5, alpha=0.8)
                 t_all.append(t)
                 y_all.append(np.concatenate([np.ravel(obs), np.ravel(pred_hi)]))
-                self.pp_diagnostics[f"{labels[i]}:{component}"] = diag
-                print(f"  {labels[i]:<22}{diag['coverage']:>8.1%}"
-                      f"{diag['rms_z']:>10.2f}{diag['max_abs_z']:>10.2f}")
                 drawn = True
 
             if logx:

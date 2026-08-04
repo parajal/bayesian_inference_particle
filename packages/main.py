@@ -66,9 +66,9 @@ class InferenceProcedure(
         seed: int = 42,
         use_y: bool = False,
         l_bias: float = 1.0,
-        sigma_bias: float | str | None = "infer",
+        sigma_bias: str | None = "infer",
         burn_fraction: float = 0.3,
-        nsteps: int = 5000,
+        nsteps: int = 10000,
         nwalkers: int | str = "auto",
         thin_factor: int = 1,
     ) -> None:
@@ -111,9 +111,9 @@ class InferenceProcedure(
             Also fit ``y`` in the parallel bounded viscoelastic case.
         l_bias : float, optional
             Correlation length of the model-discrepancy kernel.
-        sigma_bias : float, "infer", or None, optional
-            Discrepancy scale: a fixed value, ``"infer"`` to sample it, or
-            ``None`` to disable it.
+        sigma_bias : "infer" or None, optional
+            Discrepancy scale: ``"infer"`` to sample it, or ``None`` to disable
+            it.
         burn_fraction : float, optional
             Fraction of each chain discarded as burn-in.
         nsteps : int, optional
@@ -242,16 +242,6 @@ class InferenceProcedure(
         """
         return self.sigma_bias == "infer"
 
-    def _bias_is_disabled(self) -> bool:
-        """Whether the model-discrepancy term is turned off.
-
-        Returns
-        -------
-        bool
-            ``True`` if ``sigma_bias is None``.
-        """
-        return self.sigma_bias is None
-
     def is_perpendicular(self) -> bool:
         """Whether loading is perpendicular to the wall (``theta == 90 deg``).
 
@@ -296,18 +286,6 @@ class InferenceProcedure(
             "bounded model requires delta0 in theta or "
             "InferenceProcedure(..., delta0=...).")
 
-    def _get_fixed_bias(self) -> float | None:
-        """Return ``sigma_bias`` when it is a fixed number.
-
-        Returns
-        -------
-        float or None
-            The fixed value, or ``None`` if bias is inferred or disabled.
-        """
-        if isinstance(self.sigma_bias, (int, float)):
-            return float(self.sigma_bias)
-        return None
-
     def _extract_noise_bias(self, theta: np.ndarray) -> tuple[float, float | None]:
         """Split noise and bias scales out of a physical parameter vector.
 
@@ -322,14 +300,12 @@ class InferenceProcedure(
         sigma_noise : float
             Measurement-noise scale.
         sigma_bias : float or None
-            Discrepancy scale (inferred value, fixed value, or ``None``).
+            Discrepancy scale (inferred value, or ``None`` if disabled).
         """
         theta = np.asarray(theta, dtype=float)
         idx = len(self._get_parameter_bounds())
         sigma_noise = float(theta[idx])
-        sigma_bias = (
-            float(theta[idx + 1]) if self._bias_is_inferred() else self._get_fixed_bias()
-        )
+        sigma_bias = float(theta[idx + 1]) if self._bias_is_inferred() else None
         return sigma_noise, sigma_bias
 
 __all__ = ["InferenceProcedure"]
