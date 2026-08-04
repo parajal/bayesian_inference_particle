@@ -1,24 +1,4 @@
-# Byte-compiled files
-__pycache__/
-*.py[cod]
-
-# Generated figures
+﻿# Ignore local/generated content that should not be published
+blobs/
+extras/
 plots/
-
-# Jupyter
-.ipynb_checkpoints/
-
-# Environments
-.venv/
-venv/
-env/
-
-# Packaging / tooling caches
-build/
-dist/
-*.egg-info/
-.pytest_cache/
-
-# OS cruft
-.DS_Store
-Thumbs.db
