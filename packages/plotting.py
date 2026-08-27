@@ -23,25 +23,7 @@ plt.rcParams.update(
 )
 
 def _correlated_normal(rng, cov, scale):
-    """Draw a zero-mean Gaussian vector with covariance ``scale**2 * cov``.
 
-    The covariance is symmetrised and its eigenvalues clipped at zero, so
-    numerically indefinite inputs are handled gracefully.
-
-    Parameters
-    ----------
-    rng : numpy.random.Generator
-        Random generator.
-    cov : numpy.ndarray
-        Covariance (or correlation) matrix.
-    scale : float
-        Multiplies the drawn vector.
-
-    Returns
-    -------
-    numpy.ndarray
-        A single draw of length ``len(cov)``.
-    """
     cov = 0.5 * (np.asarray(cov, dtype=float) + np.asarray(cov, dtype=float).T)
     lam, U = np.linalg.eigh(cov)
     z = rng.standard_normal(len(cov))
@@ -82,34 +64,7 @@ class Plotting:
         return base_name if len(components) == 1 else f"{base_name}_{component}"
 
     def _set_axes(self, ax, x, y, n_ticks=3, y_max=None, key=None, store=False):
-        """Set both axes to ``[0, max]`` with ``n_ticks`` evenly spaced ticks.
 
-        A 10% margin is added above the y maximum. When ``key`` is given the
-        resulting y-limits and y-ticks are cached under that key, so several
-        figures can share one y-axis: the first call with ``store=True`` (e.g.
-        ``plot_data``) fixes the scale and later calls with the same ``key``
-        reuse it (e.g. ``plot_posterior_predictive``).
-
-        Parameters
-        ----------
-        ax : matplotlib.axes.Axes
-            Axes to adjust.
-        x, y : array_like
-            Data plotted on each axis; only their maxima are used.
-        n_ticks : int, optional
-            Number of ticks per axis.
-        y_max : float, optional
-            Explicit y maximum (before the margin); overrides ``y``.
-        key : hashable, optional
-            Cache key (typically the component name) for a shared y-axis.
-        store : bool, optional
-            If ``True``, (re)compute and cache the y-axis under ``key``. If
-            ``False`` and ``key`` is cached, reuse the cached y-axis.
-
-        Returns
-        -------
-        None
-        """
         x_max = float(np.max(x))
         ax.set_xlim(0.0, x_max)
         ax.set_xticks(np.linspace(0.0, x_max, n_ticks))
@@ -127,7 +82,6 @@ class Plotting:
         ax.set_yticks(y_ticks)
 
     def _save_current_figure(self, name: str) -> None:
-        """Save the current figure to ``plots/<name>.pdf``."""
         output_dir = os.path.abspath("plots")
         os.makedirs(output_dir, exist_ok=True)
         path = os.path.join(output_dir, f"{name}.pdf")
@@ -135,19 +89,7 @@ class Plotting:
         print(f"Saved figure: {path}")
 
     def _resolve_theta_true(self, theta_true):
-        """Fall back to ``self.theta_true`` when no value is passed.
 
-        Parameters
-        ----------
-        theta_true : sequence of float or None
-            Explicit ground-truth parameters, or ``None`` to use the value set
-            on the ``InferenceProcedure`` (``theta_true=...`` at construction).
-
-        Returns
-        -------
-        list of float or None
-            The resolved ground-truth parameter vector.
-        """
         if isinstance(theta_true, (bool, np.bool_)):
             theta_true = None
         if theta_true is None:
@@ -155,22 +97,11 @@ class Plotting:
         return None if theta_true is None else list(theta_true)
 
     def plot_data(self, theta_true=None) -> None:
-        """Plot the observed data (FOM) against the forward model at the truth (SAM).
 
-        Parameters
-        ----------
-        theta_true : sequence of float, optional
-            Physical parameters at which the model curve is drawn. Defaults to
-            the ``theta_true`` set on the model.
-
-        Returns
-        -------
-        None
-        """
         theta_true = self._resolve_theta_true(theta_true)
         if theta_true is None:
             raise ValueError("plot_data needs theta_true (pass it or set it on the model).")
-        components = self._fit_components(self.data)
+        components = self._fit_components()
         lw = 3 if self.material_model == "newtonian" else 2
         d = self.data
 
@@ -178,7 +109,6 @@ class Plotting:
             obs = d.get(component)
             if obs is None:
                 continue
-            # Bounded creep draws the model on a fine fixed grid; all others on the data grid.
             t_model = np.linspace(0.0, max(d["t"]), 400) if self.model == "viscoelastic_bounded" else d["t"]
             model = self._model_component(theta_true, t_model, d, component=component)
 
@@ -188,8 +118,6 @@ class Plotting:
             ax.plot(t_model, model, color="red", lw=lw, zorder=2, label="SAM")
 
             ax.set(xlabel=r"$t$", ylabel=rf"${component}(t)$")
-            # Span both the data and the model, so an overshooting SAM is not
-            # clipped, and cache the scale so later plots of this component match.
             self._set_axes(ax, d["t"], np.concatenate([np.ravel(obs), np.ravel(model)]),
                            key=component, store=True)
             ax.grid(alpha=0.3)
@@ -199,172 +127,9 @@ class Plotting:
             )
             plt.show()
 
-    def plot_model_error(self, theta_true=None) -> None:
-        """Plot the absolute model error ``|FOM - SAM|`` over time, per component.
-
-        This is the pure discrepancy between the two models, so it uses the
-        noise-free FOM series rather than the noisy observations. The printed
-        relative L2 error is ``||FOM - SAM||_2 / ||FOM||_2``.
-
-        Parameters
-        ----------
-        theta_true : sequence of float, optional
-            Physical parameters at which the model is evaluated. Defaults to the
-            ``theta_true`` set on the model.
-
-        Returns
-        -------
-        None
-
-        Raises
-        ------
-        RuntimeError
-            If no dataset has been loaded.
-        """
-        if self.data is None:
-            raise RuntimeError("No data loaded.")
-        theta_true = self._resolve_theta_true(theta_true)
-        if theta_true is None:
-            raise ValueError("plot_model_error needs theta_true (pass it or set it on the model).")
-
-        components = self._fit_components(self.data)
-        d = self.data
-
-        for component in components:
-            fom = d.get(f"{component}_clean", d.get(component))
-            if fom is None:
-                continue
-            fom = np.asarray(fom, dtype=float)
-            # Evaluate on the data grid so it aligns point-by-point with the FOM data.
-            model = self._model_component(theta_true, d["t"], d, component=component)
-            error = np.abs(fom - model)
-
-            _, ax = plt.subplots(figsize=(8, 6))
-            ax.plot(d["t"], error, color="red", lw=2, marker="o", ms=4)
-            ax.set(
-                xlabel=r"$t$",
-                ylabel=rf"$|{component}_{{\mathrm{{FOM}}}} - {component}_{{\mathrm{{SAM}}}}|$",
-            )
-            self._set_axes(ax, d["t"], error)
-            ax.grid(alpha=0.3)
-            self._save_current_figure(
-                self._figure_name("model_error", component, components)
-            )
-            plt.show()
-
-            fom_norm = np.linalg.norm(fom)
-            relative_l2 = np.linalg.norm(error) / fom_norm if fom_norm > 0 else np.nan
-            print(f"{component} model error: max |error| = {error.max():.6g}, "
-                  f"mean |error| = {error.mean():.6g}, "
-                  f"relative L2 error = {relative_l2:.6g}")
-
-    def plot_model_error_fit(self, theta_true=None) -> None:
-        """Plot the model error ``|FOM - SAM|`` at the fitted parameters.
-
-        Like :meth:`plot_model_error`, but evaluates the forward model at the
-        posterior-mean material parameters (the calibrated fit) rather than at
-        the truth. When a ground truth is available, the error at the truth is
-        overlaid, showing how much of the discrepancy the parameters absorb
-        during the fit. The printed relative L2 error is ``||FOM - SAM||_2 /
-        ||FOM||_2`` at the fitted parameters.
-
-        Parameters
-        ----------
-        theta_true : sequence of float, optional
-            Ground-truth parameters for the overlaid ``before fit`` curve.
-            Defaults to the ``theta_true`` set on the model.
-
-        Returns
-        -------
-        None
-
-        Raises
-        ------
-        RuntimeError
-            If the sampler has not been run or no dataset is loaded.
-        """
-        if self.samples is None:
-            raise RuntimeError("Run MCMC first.")
-        if self.data is None:
-            raise RuntimeError("No data loaded.")
-        theta_true = self._resolve_theta_true(theta_true)
-
-        n_phys = len(self._get_parameter_names())
-        theta_fit = self.samples[:, :n_phys].mean(axis=0)
-
-        components = self._fit_components(self.data)
-        d = self.data
-
-        for component in components:
-            fom = d.get(f"{component}_clean", d.get(component))
-            if fom is None:
-                continue
-            fom = np.asarray(fom, dtype=float)
-            error = np.abs(fom - self._model_component(theta_fit, d["t"], d, component=component))
-
-            _, ax = plt.subplots(figsize=(8, 6))
-            ax.plot(d["t"], error, color="blue", lw=2, marker="o", ms=4, label="after fit")
-            span = error
-            if theta_true is not None:
-                error_true = np.abs(fom - self._model_component(theta_true, d["t"], d, component=component))
-                ax.plot(d["t"], error_true, color="red", lw=2, ls="--", label="before fit (truth)")
-                span = np.concatenate([error, error_true])
-            ax.set(
-                xlabel=r"$t$",
-                ylabel=rf"$|{component}_{{\mathrm{{FOM}}}} - {component}_{{\mathrm{{SAM}}}}|$",
-            )
-            self._set_axes(ax, d["t"], span)
-            ax.grid(alpha=0.3)
-            ax.legend(loc="best")
-            self._save_current_figure(
-                self._figure_name("model_error_fit", component, components)
-            )
-            plt.show()
-
-            fom_norm = np.linalg.norm(fom)
-            relative_l2 = np.linalg.norm(error) / fom_norm if fom_norm > 0 else np.nan
-            print(f"{component} model error (after fit): max |error| = {error.max():.6g}, "
-                  f"mean |error| = {error.mean():.6g}, "
-                  f"relative L2 error = {relative_l2:.6g}")
-
-    def plot_corner(self, theta_true=None, log_scale=False, cred_level=0.95,
+    def plot_corner(self, theta_true=None, log_scale=False,
                     label_size=40, physical_only=True) -> None:
-        """Corner plot of the inferred parameters, with the prior on the diagonals.
 
-        The material parameters are sampled on a uniform ``log10`` prior. With
-        ``log_scale=True`` the diagonals use those coordinates, where the prior
-        is flat; with ``log_scale=False`` (default) they use physical units,
-        where the same prior appears as a ``1/x`` density (the red curve). When
-        ``physical_only=False`` the noise and bias scales are appended, showing
-        only the histogram and credible interval.
-
-        Parameters
-        ----------
-        theta_true : sequence of float, optional
-            Physical ground-truth values, marked on the diagonals.
-        log_scale : bool, optional
-            Plot the material parameters in ``log10`` coordinates instead of
-            physical units (default ``False``).
-        cred_level : float, optional
-            Central credible level whose equal-tailed bounds are drawn as black
-            dotted lines on the diagonals (default 0.95).
-        label_size : float, optional
-            Font size of the parameter symbols on the axes. Defaults to the
-            global ``axes.labelsize``.
-        physical_only : bool, optional
-            If ``True`` (default), show only the material parameters. If
-            ``False``, also include the inferred hyperparameters
-            (``sigma_noise`` and, when inferred, ``sigma_bias``).
-
-        Returns
-        -------
-        None
-
-        Raises
-        ------
-        RuntimeError
-            If the sampler has not been run.
-        """
         if self.samples is None:
             raise RuntimeError("Run MCMC first.")
         theta_true = self._resolve_theta_true(theta_true)
@@ -405,7 +170,6 @@ class Plotting:
             data_kwargs=dict(ms=1.5, alpha=0.2, color="gray"),
         )
 
-        q_lo, q_hi = 50.0 * (1.0 - cred_level), 50.0 * (1.0 + cred_level)
         axes = np.array(fig.axes).reshape((ndim, ndim))
         for i in range(ndim):
             ax = axes[i, i]
@@ -431,7 +195,7 @@ class Plotting:
                     dens = np.where((xs >= lo) & (xs <= hi), 1.0 / (xs * np.log(hi / lo)), 0.0)
                     ax.plot(xs, dens, color="red", lw=1.5)
 
-            ci = np.percentile(samples[:, i], [q_lo, q_hi])
+            ci = np.percentile(samples[:, i], [2.5, 97.5])
             ax.axvline(ci[0], color="black", ls=":", lw=1.5)
             ax.axvline(ci[1], color="black", ls=":", lw=1.5)
             if truths[i] is not None:
@@ -444,12 +208,7 @@ class Plotting:
         plt.show()
 
     def plot_trace(self) -> None:
-        """Trace plot per parameter, with the burn-in cut and posterior mean marked.
-
-        Returns
-        -------
-        None
-        """
+ 
         chain = self._to_physical(self.sampler.get_chain())
         nsteps, nwalkers, ndim = chain.shape
         burn = int(self.burn_fraction * nsteps)
@@ -474,20 +233,7 @@ class Plotting:
         plt.show()
 
     def plot_prior(self, n: int = 5000, coordinate: str = "log10") -> None:
-        """Plot the marginal prior density of every sampled parameter.
 
-        Parameters
-        ----------
-        n : int, optional
-            Number of points used to draw each curve.
-        coordinate : {"log10", "physical"}, optional
-            Whether the log-uniform material priors are drawn against
-            ``log10(parameter)`` or the parameter itself on a log axis.
-
-        Returns
-        -------
-        None
-        """
         coordinate = coordinate.lower()
         bounds = self._get_parameter_bounds()
         n_phys = len(bounds)
@@ -538,34 +284,13 @@ class Plotting:
         logx: bool = False,
         logy: bool = False,
     ) -> None:
-        """Plot the 95% posterior predictive band against the observed data.
 
-        For each posterior draw the forward model is evaluated, a zero-mean
-        model discrepancy is drawn from its prior, and measurement noise is
-        added to form a replicated dataset.
-
-        Parameters
-        ----------
-        nsamples_pred : int, optional
-            Maximum number of posterior draws used.
-        logx, logy : bool, optional
-            Use logarithmic axes.
-
-        Returns
-        -------
-        None
-
-        Raises
-        ------
-        RuntimeError
-            If the sampler has not been run or no dataset is loaded.
-        """
         if self.samples is None:
             raise RuntimeError("Run MCMC first.")
         if self.data is None:
             raise RuntimeError("No data loaded.")
 
-        components = self._fit_components(self.data)
+        components = self._fit_components()
 
         for component in components:
             summary = self._predictive_summary(component, nsamples_pred)
@@ -583,10 +308,7 @@ class Plotting:
                 ax.set_xscale("log")
             if logy:
                 ax.set_yscale("log")
-            if not (logx or logy):
-                # Reuse plot_data's y-axis for this component when available.
-                self._set_axes(ax, t, np.concatenate([np.ravel(obs), np.ravel(pred_hi)]),
-                               key=component)
+
             ax.set_xlabel("$t$")
             ax.set_ylabel(rf"${component}(t)$")
             ax.grid(True, alpha=0.3)
@@ -603,25 +325,7 @@ class Plotting:
             plt.show()
 
     def _predictive_summary(self, component, nsamples_pred=5000):
-        """95% posterior-predictive band for one component.
 
-        Replicates the loaded dataset from the posterior draws (forward model +
-        zero-mean model discrepancy + measurement noise) and summarises the
-        replicates. Operates on the currently selected ``self.data``.
-
-        Parameters
-        ----------
-        component : str
-            Displacement component to summarise.
-        nsamples_pred : int, optional
-            Maximum number of posterior draws used.
-
-        Returns
-        -------
-        tuple or None
-            ``(t, obs, mean_pred, pred_lo, pred_hi)``, or ``None`` if the
-            component is absent from the dataset.
-        """
         d = self.data
         obs = d.get(component)
         if obs is None:
@@ -660,19 +364,7 @@ class Plotting:
         return t, obs, mean_pred, pred_lo, pred_hi
 
     def plot_results(self, physical_only: bool = True) -> None:
-        """Draw the posterior predictive, corner, and trace figures.
 
-        Parameters
-        ----------
-        physical_only : bool, optional
-            Passed to :meth:`plot_corner`. If ``True`` (default), the corner
-            plot shows only the material parameters; if ``False``, it also
-            includes the inferred hyperparameters.
-
-        Returns
-        -------
-        None
-        """
         self.plot_posterior_predictive()
         self.plot_corner(physical_only=physical_only)
         self.plot_trace()

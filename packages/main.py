@@ -1,9 +1,4 @@
-"""Main Bayesian inference procedure."""
-
-from __future__ import annotations
-
 import numpy as np
-
 from .data_io import DataIO
 from .sampler import Sampler
 from .forward_models import ForwardModels
@@ -12,7 +7,6 @@ from .plotting import Plotting
 from .priors import Priors
 from .logtransforms import Transforms
 from .wall_corrections import WallCorrections
-
 
 _MODEL_PARAMETERS = {
     "newtonian_unbounded": ["eta_s"],
@@ -34,102 +28,26 @@ _LATEX_LABELS = {
 
 
 class InferenceProcedure(
-    WallCorrections,
-    ForwardModels,
-    DataIO,
-    Transforms,
-    Priors,
-    Likelihood,
-    Sampler,
-    Plotting,
+    WallCorrections, ForwardModels, DataIO, Transforms,
+    Priors, Likelihood, Sampler, Plotting,
 ):
-    """Compose data loading, forward models, priors, likelihood, MCMC, and plots."""
 
     def __init__(
-        self,
-        force: float,
-        a: float = 1.0,
-        theta: float = 45.0,
-        material_model: str = "newtonian",
-        boundary_model: str = "bounded",
-        delta0: float | None = None,
-        t_unload: float | None = 0.2,
-        theta_true: "list[float] | None" = None,
-        hasimoto_corr: bool = False,
-        L: float | None = None,
-        eta_s_bounds: tuple[float, float] = (0.01, 100.0),
-        eta_p_bounds: tuple[float, float] = (0.01, 100.0),
-        lambda_bounds: tuple[float, float] = (0.01, 100.0),
-        delta0_bounds: tuple[float, float] = (1e-4, 100.0),
-        sigma_noise_percent: float | None = None,
-        sigma_noise_value: float | None = None,
-        seed: int = 42,
-        use_y: bool = False,
-        l_bias: float = 1.0,
-        sigma_bias: str | None = "infer",
-        burn_fraction: float = 0.3,
-        nsteps: int = 10000,
-        nwalkers: int | str = "auto",
-        thin_factor: int = 1,
-    ) -> None:
-        """Configure the inference problem.
-
-        Parameters
-        ----------
-        force : float
-            Applied force magnitude.
-        a : float, optional
-            Bead radius.
-        theta : float, optional
-            Pull angle in degrees (90 deg is perpendicular to the wall).
-        material_model : {"newtonian", "viscoelastic"}, optional
-            Rheological model.
-        boundary_model : {"bounded", "unbounded"}, optional
-            Whether wall corrections are applied.
-        delta0 : float or None, optional
-            Fixed initial wall gap when it is not inferred.
-        t_unload : float or None, optional
-            Load-removal time for viscoelastic datasets.
-        hasimoto_corr : bool, optional
-            If ``True``, divide the loaded displacement by the Hasimoto mobility
-            ratio ``Q(L)``, collapsing periodic particle-particle data onto the
-            unbounded response. Requires ``L``.
-        L : float or None, optional
-            Periodic box size (in units of ``a``) used by the Hasimoto
-            correction.
-        eta_s_bounds, eta_p_bounds, lambda_bounds, delta0_bounds : tuple of float, optional
-            ``(low, high)`` log-uniform prior bounds for each material
-            parameter; both entries must be positive.
-        sigma_noise_percent : float or None, optional
-            Noise level as a percentage of peak displacement (used by data loading).
-        sigma_noise_value : float or None, optional
-            Absolute noise standard deviation. If given, it overrides
-            ``sigma_noise_percent`` and is used directly as the noise scale.
-        seed : int or None, optional
-            Seed for the synthetic measurement noise added in ``load_data``.
-        use_y : bool, optional
-            Also fit ``y`` in the parallel bounded viscoelastic case.
-        l_bias : float, optional
-            Correlation length of the model-discrepancy kernel.
-        sigma_bias : "infer" or None, optional
-            Discrepancy scale: ``"infer"`` to sample it, or ``None`` to disable
-            it.
-        burn_fraction : float, optional
-            Fraction of each chain discarded as burn-in.
-        nsteps : int, optional
-            MCMC steps per walker.
-        nwalkers : int or "auto", optional
-            Walker count; ``"auto"`` uses ``2 * ndim``.
-        thin_factor : int, optional
-            Keep every ``thin_factor``-th sample when loading data.
-
-        Returns
-        -------
-        None
-        """
+        self, force, a=1.0, theta=45.0,
+        material_model="newtonian", boundary_model="bounded",
+        delta0=None, t_unload=0.2, theta_true=None,
+        hasimoto_corr=False, L=None,
+        eta_s_bounds=(0.01, 100.0), eta_p_bounds=(0.01, 100.0),
+        lambda_bounds=(0.01, 100.0), delta0_bounds=(1e-3, 100.0),
+        sigma_noise_percent=2.0, seed=42, use_y=False,
+        l_bias=1.0, sigma_bias="infer", burn_fraction=0.3,
+        nsteps=10000, nwalkers="auto", thin_factor=1,
+        rtol=1e-7, atol=1e-9, n_brenner_terms=100,
+    ):
         self.theta = float(theta)
-        self.material_model = str(material_model).strip().lower()
-        self.boundary_model = str(boundary_model).strip().lower()
+        self.material_model = material_model.lower()
+        self.boundary_model = boundary_model.lower()
+
         self.model = f"{self.material_model}_{self.boundary_model}"
         if self.boundary_model == "bounded" and self.is_perpendicular():
             self.model += "_perp"
@@ -138,36 +56,26 @@ class InferenceProcedure(
         self.a = float(a)
         self.delta0 = None if delta0 is None else float(delta0)
         self.t_unload = t_unload
-        self.theta_true = None if theta_true is None else list(theta_true)
         self._t_unload_eff = t_unload
+        self.theta_true = None if theta_true is None else list(theta_true)
         self.hasimoto_corr = bool(hasimoto_corr)
         self.L = None if L is None else float(L)
 
         self.bounds = {
-            "eta_s": eta_s_bounds,
-            "eta_p": eta_p_bounds,
-            "lambda_": lambda_bounds,
-            "delta0": delta0_bounds,
+            "eta_s": eta_s_bounds, "eta_p": eta_p_bounds,
+            "lambda_": lambda_bounds, "delta0": delta0_bounds,
         }
-        for name, (low, high) in self.bounds.items():
-            if not 0.0 < low < high:
+        for name, (lo, hi) in self.bounds.items():
+            if not 0 < lo < hi:
                 raise ValueError(f"{name}_bounds must satisfy 0 < low < high.")
 
-        self.data = None
-        self.sampler = None
-        self.samples = None
+        self.data = self.sampler = self.samples = None
 
-        self.sigma_noise_percent = (
-            None if sigma_noise_percent is None else float(sigma_noise_percent)
-        )
-        self.sigma_noise_value = (
-            None if sigma_noise_value is None else float(sigma_noise_value)
-        )
+        self.sigma_noise_percent = sigma_noise_percent
         self.seed = seed
         self.use_y = bool(use_y)
         self.sigma_bias = sigma_bias
         self.l_bias = float(l_bias)
-
         self.burn_fraction = float(burn_fraction)
         self.nsteps = int(nsteps)
         self.thin_factor = int(thin_factor)
@@ -175,137 +83,51 @@ class InferenceProcedure(
         self.ndim = self._get_ndim()
         self.nwalkers = 2 * self.ndim if nwalkers == "auto" else int(nwalkers)
 
-    def _get_parameter_names(self) -> list[str]:
-        """Material parameter names for the active model, in sampling order.
+        self.rtol = rtol
+        self.atol = atol
+        self.n_brenner_terms = n_brenner_terms
 
-        Returns
-        -------
-        list of str
-            Names shared by ``self.bounds``, ``_LATEX_LABELS``, and the
-            forward-model signatures.
-
-        Raises
-        ------
-        ValueError
-            If ``self.model`` is not a recognised model string.
-        """
+    def _get_parameter_names(self):
         try:
             return _MODEL_PARAMETERS[self.model]
         except KeyError:
-            raise ValueError(f"unknown model '{self.model}'.")
+            raise ValueError(f"unknown model '{self.model}'")
 
-    def _get_ndim(self) -> int:
-        """Total sampler dimension: material parameters + noise + optional bias.
+    def _get_parameter_bounds(self):
+        return [self.bounds[p] for p in self._get_parameter_names()]
 
-        Returns
-        -------
-        int
-            Number of sampled coordinates.
-        """
+    def _get_ndim(self):
         return len(self._get_parameter_bounds()) + 1 + int(self._bias_is_inferred())
 
-    def _get_parameter_bounds(self) -> list[tuple[float, float]]:
-        """Prior bounds for the active model's material parameters.
-
-        Returns
-        -------
-        list of tuple of float
-            ``(low, high)`` bounds in parameter order.
-        """
-        return [self.bounds[name] for name in self._get_parameter_names()]
-
-    def _get_parameter_labels(self, latex: bool = True) -> list[str]:
-        """Parameter labels for the active model, including noise and bias.
-
-        Parameters
-        ----------
-        latex : bool, optional
-            If ``True``, return LaTeX-formatted labels; otherwise plain names.
-
-        Returns
-        -------
-        list of str
-            One label per sampled parameter.
-        """
+    def _get_parameter_labels(self, latex=True):
         names = self._get_parameter_names() + ["sigma_noise"]
         if self._bias_is_inferred():
             names.append("sigma_bias")
-        return [_LATEX_LABELS[name] for name in names] if latex else names
+        return [_LATEX_LABELS[n] for n in names] if latex else names
 
-    def _bias_is_inferred(self) -> bool:
-        """Whether ``sigma_bias`` is sampled.
-
-        Returns
-        -------
-        bool
-            ``True`` if ``sigma_bias == "infer"``.
-        """
+    def _bias_is_inferred(self):
         return self.sigma_bias == "infer"
 
-    def is_perpendicular(self) -> bool:
-        """Whether loading is perpendicular to the wall (``theta == 90 deg``).
+    def is_perpendicular(self):
+        return abs(self.theta - 90.0) < 1e-6
 
-        Returns
-        -------
-        bool
-            ``True`` when only ``y(t)`` moves.
-        """
-        return abs(float(self.theta) - 90.0) < 1e-6
-
-    def _get_delta0(self, theta: np.ndarray | None = None) -> float | None:
-        """Resolve the initial wall gap ``delta0``.
-
-        Prefers ``delta0`` carried in ``theta`` (when it is inferred), then the
-        fixed ``self.delta0``.
-
-        Parameters
-        ----------
-        theta : numpy.ndarray or None, optional
-            Physical parameters that may include ``delta0``.
-
-        Returns
-        -------
-        float or None
-            The wall gap, or ``None`` for unbounded models.
-
-        Raises
-        ------
-        ValueError
-            If a bounded model has no ``delta0`` available.
-        """
+    def _get_delta0(self, theta=None):
         if self.boundary_model != "bounded":
             return None
+
         if theta is not None:
-            theta = np.asarray(theta, dtype=float)
             idx = self._get_parameter_names().index("delta0")
-            if theta.size > idx:
+            theta = np.asarray(theta)
+            if len(theta) > idx:
                 return float(theta[idx])
+
         if self.delta0 is not None:
             return self.delta0
-        raise ValueError(
-            "bounded model requires delta0 in theta or "
-            "InferenceProcedure(..., delta0=...).")
 
-    def _extract_noise_bias(self, theta: np.ndarray) -> tuple[float, float | None]:
-        """Split noise and bias scales out of a physical parameter vector.
+        raise ValueError("bounded model requires delta0.")
 
-        Parameters
-        ----------
-        theta : numpy.ndarray
-            Physical parameters, ordered as material parameters, then
-            ``sigma_noise``, then ``sigma_bias`` (if inferred).
-
-        Returns
-        -------
-        sigma_noise : float
-            Measurement-noise scale.
-        sigma_bias : float or None
-            Discrepancy scale (inferred value, or ``None`` if disabled).
-        """
-        theta = np.asarray(theta, dtype=float)
+    def _extract_noise_bias(self, theta):
         idx = len(self._get_parameter_bounds())
         sigma_noise = float(theta[idx])
         sigma_bias = float(theta[idx + 1]) if self._bias_is_inferred() else None
         return sigma_noise, sigma_bias
-
-__all__ = ["InferenceProcedure"]
