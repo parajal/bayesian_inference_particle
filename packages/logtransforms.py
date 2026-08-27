@@ -12,5 +12,5 @@ class Transforms:
     def _to_logtransform(self, theta):
         phi = np.array(theta, dtype=float, copy=True)
         n = len(self._get_parameter_bounds())
-        phi[..., :n] = np.log10(np.maximum(phi[..., :n], np.finfo(float).tiny))
+        phi[..., :n] = np.log10(phi[..., :n])
         return phi
