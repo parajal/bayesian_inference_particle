@@ -9,7 +9,7 @@ class Likelihood:
         return np.exp(-np.abs(np.subtract.outer(t, t)) / l_bias)
 
     @staticmethod
-    def _loglikelihood(residual, sigma=None, chol=None):
+    def _residual_logprob(residual, sigma=None, chol=None):
         n = len(residual)
         if chol is None:
             r2 = residual @ residual / sigma**2
@@ -60,7 +60,7 @@ class Likelihood:
     
         logL = 0.0
         for r in residuals:
-            value = self._loglikelihood(
+            value = self._residual_logprob(
                 r,
                 sigma=sigma_noise,
                 chol=chol

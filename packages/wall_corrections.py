@@ -15,15 +15,16 @@ class WallCorrections:
 
     def _brenner_series(self, delta):
         d = np.asarray(delta,float)
-        beta = np.arccosh((d + self.a) / self.a)   # shape (M,), no extra axis
+        beta = np.arccosh((d + self.a) / self.a) 
         total = np.zeros_like(beta)
         
         for n in range(1, self.n_brenner_terms + 1):
-            t = ((2*np.sinh((2*n+1)*beta) + (2*n+1)*np.sinh(2*beta))
-                 / (4*np.sinh((n+0.5)*beta)**2 - (2*n+1)**2*np.sinh(beta)**2)
-                 - 1)
-            w = n*(n+1) / ((2*n-1)*(2*n+3))
-            total += w * np.where(np.isfinite(t), t, 0)
+            with np.errstate(over="ignore", invalid="ignore", divide="ignore"):
+                t = ((2*np.sinh((2*n+1)*beta) + (2*n+1)*np.sinh(2*beta))
+                    / (4*np.sinh((n+0.5)*beta)**2 - (2*n+1)**2*np.sinh(beta)**2)
+                    - 1)
+                w = n*(n+1) / ((2*n-1)*(2*n+3))
+                total += w * np.where(np.isfinite(t), t, 0)
         
         return (4/3) * np.sinh(beta) * total
 

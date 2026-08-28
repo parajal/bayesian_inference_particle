@@ -41,28 +41,35 @@ class Sampler:
 
         return results
 
-    def _warmup_starting_points(self, p0, moves, random_state, progress, warmup_frac, jitter_frac):
+    def _warmup_starting_points(self, p0, moves, progress, warmup_frac, jitter_frac):
         n_warmup = int(warmup_frac * self.nsteps)
-        sampler = emcee.EnsembleSampler(self.nwalkers, self.ndim, self.log_posterior, moves=moves)
+
+        sampler = emcee.EnsembleSampler(
+            self.nwalkers, self.ndim, self.log_posterior, moves=moves,
+        )
         sampler.run_mcmc(p0, n_warmup, progress=progress)
 
         chain = sampler.get_chain(flat=True)
         logp = sampler.get_log_prob(flat=True)
         best = chain[np.argsort(logp)[-self.nwalkers:]]
+
+        rng = np.random.default_rng(self.seed)
         scale = jitter_frac * chain.std(axis=0)
+        p0 = best + rng.normal(0, scale, size=best.shape)
 
-        seed = None if random_state is None else random_state + 1
-        rng = np.random.default_rng(seed)
-        return best + rng.normal(0, scale, size=best.shape)
+        print("\nFirst 5 warmup-final walkers, physical coordinates:")
+        print(self._to_physical(p0[:5]))
 
+        return p0
+    
     def run_mcmc(self, warmup=True, random_state=42, progress=True,
-                 warmup_frac=0.1, jitter_frac=0.1, n_init=10, max_iter=300):
+                 warmup_frac=0.1, jitter_frac = 0.1, n_init=10, max_iter=300):
         p0 = self.sample_starting_points(random_state, n_init, max_iter)
         moves = [(emcee.moves.StretchMove(a=2), 1.0)]
 
         if warmup:
             p0 = self._warmup_starting_points(
-                p0, moves, random_state, progress, warmup_frac, jitter_frac)
+                p0, moves, progress, warmup_frac, jitter_frac)
 
         self.sampler = emcee.EnsembleSampler(self.nwalkers, self.ndim, self.log_posterior, moves=moves)
         self.sampler.run_mcmc(p0, self.nsteps, progress=progress)
