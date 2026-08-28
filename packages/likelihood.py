@@ -30,25 +30,47 @@ class Likelihood:
     def log_likelihood(self, phi):
         d = self.data
         theta = self._to_physical(phi)
+    
         sigma_noise, sigma_bias = self._extract_noise_bias(theta)
+    
+        # Validate noise/bias parameters
+        if sigma_noise is None or sigma_noise <= 0:
+            return -np.inf
+    
+        if sigma_bias is not None and sigma_bias < 0:
+            return -np.inf
+    
+        if sigma_bias not in (None, 0.0) and self.l_bias <= 0:
+            return -np.inf
+    
         residuals = self._residuals(theta)
-
+    
         chol = None
         if sigma_bias not in (None, 0.0):
             K = self._bias_correlation_matrix(d["t"], self.l_bias)
-            cov = sigma_noise**2 * np.eye(len(d["t"])) + sigma_bias**2 * K
+            cov = (
+                sigma_noise**2 * np.eye(len(d["t"]))
+                + sigma_bias**2 * K
+            )
+    
             try:
                 chol = cho_factor(cov, lower=True)
             except (np.linalg.LinAlgError, ValueError):
                 return -np.inf
-
+    
         logL = 0.0
         for r in residuals:
-            value = self._loglikelihood(r, sigma=sigma_noise, chol=chol)
+            value = self._loglikelihood(
+                r,
+                sigma=sigma_noise,
+                chol=chol
+            )
+    
             if not np.isfinite(value):
                 return -np.inf
+    
             logL += value
-
+    
         return float(logL)
 
     def log_posterior(self, phi):
